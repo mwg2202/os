@@ -1,0 +1,67 @@
+%macro print 1
+    mov si, word %1
+    mov ah, 0x0F
+    call LIB_PRINT
+%endmacro
+
+%macro print 2
+        mov si, word %1
+        mov ah, 0x00
+        add ah, %2
+        call LIB_PRINT
+%endmacro
+
+%macro print 3
+        mov si, word %1
+        mov ah, %2
+        shl ah, 4
+        add ah, %3
+        call LIB_PRINT
+%endmacro
+
+; BIOS_PRINT
+%macro bios_print 1
+        mov si, word %1
+        call LIB_BIOS_PRINT
+%endmacro
+
+LIB_RETURN:
+    ret
+
+; To call es must hold the location of the start of text screen video memory
+; Atribute stored in ah
+LIB_PRINT:
+    lodsb
+    cmp al, 0
+    jne LIB_DOCHAR
+    add byte [LIB_PRINT_YPOS], 1
+    mov byte [LIB_PRINT_XPOS], 0
+    ret
+    LIB_DOCHAR:
+        mov cx, ax
+        movzx ax, byte [LIB_PRINT_YPOS]
+        mov dx, 160
+        mul dx
+        movzx bx, byte [LIB_PRINT_XPOS]
+        shl bx, 1
+
+        mov di, 0
+        add di, ax
+        add di, bx
+
+        mov ax, cx
+        stosw
+        add byte [LIB_PRINT_XPOS], 1
+        jmp LIB_PRINT
+    
+    LIB_PRINT_XPOS    db 0
+    LIB_PRINT_YPOS    db 0
+
+LIB_BIOS_PRINT:
+    lodsb
+    or al, al
+    jz LIB_RETURN
+    mov ah, 0x0E
+    mov bh, 0
+    int 0x10
+    jmp LIB_BIOS_PRINT
