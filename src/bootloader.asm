@@ -107,7 +107,5 @@ msg: db 'Bootloader is Running!', 10, 13, 0
 msg2: db 'Protected Mode Entered!', 0
 msg3: db 'A20 is Enabled!', 0
 
-
-
 times 510-($-$$) db 0   ; pad with zeros
 MagicNumber dw 0xAA55   ; boot sector identifier
