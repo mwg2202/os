@@ -15,15 +15,15 @@ boot:
     mov ds, ax
     mov fs, ax
     mov gs, ax
-    mov es, ax
     mov sp, 0x9C00
-    mov edi, 0xB800
+    
+    mov ax, 0xB800
+    mov es, ax
 
-    ; Method 2    
-    in al, 0x92
-    or al, 2
-    out 0x92, al
-
+    ; Method 1
+    mov ax, 0x2401
+    int 0x15
+    
     ; Set VGA Text Mode to 3
     mov ax, 0x3
     int 0x10 
@@ -32,18 +32,17 @@ boot:
 
 %include "src/include/definitions.asm"
 %include "src/include/bootloader.asm"
-[BITS 16]
 
 mainCode:
+    cli
     ; In real mode
     bios_print msg
-
     ; Enter Protected Mode
     lgdt [gdt_pointer]
     mov eax, cr0
     or eax, 0x1
     mov cr0, eax
-    jmp CODE_SEG:boot2 ; Jumps to clear instruction pipeline of 16-bit instructions
+    jmp 08h:boot2 ; Jumps to clear instruction pipeline of 16-bit instructions
 
 gdt_start:
 gdt_null:
@@ -66,11 +65,13 @@ gdt_data:
     db 0x0
 gdt_end:
 gdt_pointer:
-    dw gdt_end - gdt_start
+    dw gdt_end - gdt_start - 1
     dd gdt_start
 
 CODE_SEG equ gdt_code - gdt_start
 DATA_SEG equ gdt_data - gdt_start
+
+[BITS 32]
 
 boot2:
     ; Fills segment registers
@@ -80,11 +81,12 @@ boot2:
     mov fs, ax
     mov gs, ax
     mov ss, ax
+    add edi, 0xB8000
 
     ; In Protected Mode
-    ;print msg2
-    ;print_hex MagicNumber, 4
-    ;print LIB_HEX
+    print msg2
+    print_hex MagicNumber, 4
+    print_hex 0x150, 8
 
     ; Check if A20 is enabled
     pushad

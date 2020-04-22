@@ -44,8 +44,8 @@
     push edi
     mov esi, %1
     mov cl, %2
-    ;mov edi, LIB_HEX
-    ;add edi, 2
+    mov edi, LIB_HEX
+    add edi, 2
     call LIB_PRINT_HEX
     pop edi
     print LIB_HEX
@@ -68,15 +68,12 @@ LIB_BIOS_PRINT:
 LIB_PRINT:
     lodsb
     cmp al, 0
-    je LIB_PRINT_RETURN
+    je LIB_RETURN
     stosw
-    add edi, -2
     jmp LIB_PRINT
-    LIB_PRINT_RETURN: 
-        ret
 
 LIB_HEX_TABLE db "0123456789ABCDEF"
-LIB_HEX dw "0x**********", 10, 13, 0 
+LIB_HEX dw "0x****************", 0 
 
 LIB_PRINT_HEX:
 
@@ -102,3 +99,5 @@ LIB_PRINT_HEX:
     mov al, 0
     stosb
     ret
+
+    [BITS 16]
