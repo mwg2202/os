@@ -31,7 +31,7 @@ boot:
     jmp mainCode
 
 %include "src/include/definitions.asm"
-%include "src/include/bootloader.asm"
+%include "src/include/macros.asm"
 
 mainCode:
     cli
