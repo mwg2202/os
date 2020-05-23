@@ -1,13 +1,19 @@
 # os
 ## Dependencies
 - NASM (`apt install nasm`)
-- CMake (`apt install cmake`)
+- Make (`apt install make`)
 
 ## To run without UEFI support through QEMU
-`make && make run`
+`make run`
 
 ## To run with UEFI through QEMU
-`make UEFI && make runUEFI`
+`make compileRun`
+
+## To run with UEFI through QEMU (Depricated)
+`make runUEFI`
+
+## To clean the build folder
+ `make clean`
 
 ## FAQ
 - If an debian distribution throws the error that qemu-system-x86_64 could not be found, install the following packages: 
