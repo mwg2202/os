@@ -2,7 +2,7 @@
 [BITS 16]
 [ORG 0x7C00]
 
-boot:
+_boot:
     cld
     cli
     resetDrive:

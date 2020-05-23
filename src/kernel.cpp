@@ -1,68 +1,32 @@
-#include <string>
-#include "./include/ErrorHandler.cpp"
-#include "./include/GraphicsController.cpp"
+#include <efi.h>
+#include <efilib.h>
 
-main() {
-    enum backgroundColor {
-        black       =  1
-        blue        =  2
-        cyan        =  3
-        red         =  4
-        purple      =  5
-        brown       =  6
-        gray        =  7
-        darkGray    =  8
-        lightBlue   =  9
-        lightGreen  = 10
-        lightCyan   = 11
-        lightRed    = 12
-        lightPurple = 13
-        yellow      = 14
-        white       = 15
-    };
-    enum backgroundColor {
-        black       =  1
-        blue        =  2
-        cyan        =  3
-        red         =  4
-        purple      =  5
-        brown       =  6
-        gray        =  7
-        darkGray    =  8
-        lightBlue   =  9
-        lightGreen  = 10
-        lightCyan   = 11
-        lightRed    = 12
-        lightPurple = 13
-        yellow      = 14
-        white       = 15
-    };
-
-
-
-
-
-
-}
-
-void SetUpInterruptTable() {
-
-}
-
-void getInput() {
-    
-}
-
-void vgaMode3Init(){
-    volatile char *video = (volatile char*)0xB8000;
-
-}
-
-void write_string(char *inputString, int backgroundColour = 0, int fontColour = 0) {
-    volatile char *video
-    while( *string != 0 )
-    {
-        *
-    }
-
+EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+{
+    EFI_STATUS Status;
+    EFI_INPUT_KEY Key;
+ 
+    /* Store the system table for future use in other functions */
+    ST = SystemTable;
+ 
+    /* Say hi */
+    Status = ST->ConOut->OutputString(ST->ConOut, L"Hello World\n\r");
+    if (EFI_ERROR(Status))
+        return Status;
+ 
+    /* Now wait for a keystroke before continuing, otherwise your
+       message will flash off the screen before you see it.
+ 
+       First, we need to empty the console input buffer to flush
+       out any keystrokes entered before this point */
+    Status = ST->ConIn->Reset(ST->ConIn, FALSE);
+    if (EFI_ERROR(Status))
+        return Status;
+ 
+    /* Now wait until a key becomes available.  This is a simple
+       polling implementation.  You could try and use the WaitForKey
+       event instead if you like */
+    while ((Status = ST->ConIn->ReadKeyStroke(ST->ConIn, &Key)) == EFI_NOT_READY) ;
+ 
+    return Status;
 }
