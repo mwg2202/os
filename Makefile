@@ -1,9 +1,23 @@
-disk=./build/diskimage.dd
-parted=parted -s $(disk) unit s
-CC=x86_64-w64-mingw32-gcc
-CFLAGS=-ffreestanding -Ignu-efi/inc -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -Ignu-efi/lib -c
-qemu=qemu-system-x86_64
-LDFLAGS=-nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
+disk	=	./build/diskimage.dd
+parted	=	parted -s $(disk) unit s
+CC		=	x86_64-w64-mingw32-gcc
+LD		=	ld
+qemu	=	qemu-system-x86_64
+
+arch	=	$(shell uname -m | sed s,i[3456789]86,ia32,)
+efiInc	=	build/gnu-efi/include/efi
+efiIncs =	-I$(efiInc) -I$(efiInc)/x86_64 -I$(efiInc)/protocol
+efiLib	=	build/gnu-efi/lib
+efiCrt  =	$(efiLib)/crt0-efi-$(arch).o
+efiLds	= 	$(efiLib)/elf_$(arch)_efi.lds
+CFLAGS	=	$(efiIncs) -fno-stack-protector -fpic \
+			-fshort-wchar -mno-red-zone -Wall -c
+LDFLAGS	=	-nostdlib -T $(efiLds) -shared \
+			-Bsymbolic -L $(efiLib) $(efiCrt)
+
+ifeq ($(arch),x86_64)
+	CFLAGS += -DEFI_FUNCTION_WRAPPER
+endif
 
 build:clean
 	mkdir -p build
@@ -19,30 +33,29 @@ clean:
 run:build
 	$(qemu) -hda $(disk)
 
-buildUEFI:clean
+buildGnuEFI:clean
 	mkdir -p build
-	nasm -fbin ./src/bootloader.asm -o ./build/bootloader.bin
-	dd if=/dev/zero of=$(disk) bs=1M count=10
-	$(parted) mklabel gpt 
-	$(parted) mkpart primary 100 300
-	$(parted) set 1 esp on
-
-
-runUEFI:buildUEFI
-	$(qemu) -hda $(disk) -bios OVMF.fd -net none
-
-compile:clean
-	mkdir -p build
-	# compile: (flags before -o become CFLAGS in your Makefile)
+	#cp edk2/Build/OvmfX64/DEBUG_GCC5/FV/OVMF.fd build/OVMF.fd
+	cd gnu-efi && make install
 	$(CC) $(CFLAGS) -o build/kernel.o src/kernel.c
-	$(CC) $(CFLAGS) -o build/data.o src/data.c
-	# link: (flags before -o become LDFLAGS in your Makefile)
-	$(CC) $(LDFLAGS) -o build/BOOTX64.EFI build/kernel.o build/data.o -lgcc
+	$(LD) $(LDFLAGS) -o build/BOOTX64.EFI build/kernel.o -lefi -lgnuefi
 	dd if=/dev/zero of=build/fat.img bs=1k count=1440
 	mformat -i build/fat.img -f 1440 ::
 	mmd -i build/fat.img ::/EFI
 	mmd -i build/fat.img ::/EFI/BOOT
 	mcopy -i build/fat.img build/BOOTX64.EFI ::/EFI/BOOT
 
-compileRun:compile
-	$(qemu) -bios OVMF.fd -usb build/fat.img -net none
+runGnuEFI:buildGnuEFI
+	$(qemu) -pflash OVMF.fd -usb build/fat.img -net none
+
+buildEDK2:clean
+	mkdir -p build
+	#cp edk2/OvmfPkg/Include build/Include
+	dd if=/dev/zero of=build/fat.img bs=1k count=1440
+	mformat -i build/fat.img -f 1440 ::
+	mmd -i build/fat.img ::/EFI
+	mmd -i build/fat.img ::/EFI/BOOT
+	mcopy -i build/fat.img src/bootx64.efi ::/EFI/BOOT
+	
+runEDK2:buildEDK2
+	$(qemu) -pflash OVMF.fd -usb build/fat.img -net none
