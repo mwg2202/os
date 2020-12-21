@@ -1,0 +1,14 @@
+[package]
+name = "os"
+version = "0.1.0"
+authors = ["Matt Glen <mwg2202@yahoo.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+uefi = "0.7.0"
+uefi-services = "0.4.0"
+rlibc = "1.0.0"
+log = {version = "0.4.11", default-features = false}
+

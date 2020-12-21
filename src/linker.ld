@@ -1,5 +1,0 @@
-ENTRY(_boot)
-
-SECTIONS(){
-    
-}
