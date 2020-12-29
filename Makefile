@@ -8,7 +8,7 @@ qemu 		= 	qemu-system-$(targetArch)
 
 
 # Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
-qemuFlags 	=	-nodefaults -vga std -machine q35,accel=kvm:tcg -m 128M \
+qemuFlags 	=	-nodefaults -vga std -machine q35 -m 128M \
 	-drive if=pflash,format=raw,readonly,file=OVMF_CODE.fd\
 	-drive if=pflash,format=raw,file=OVMF_VARS-1024x768.fd\
 	-drive format=raw,file=fat:rw:build\
@@ -19,8 +19,9 @@ clean:
 
 build/EFI/BOOT/BootX64.efi:src/main.rs
 	mkdir -p build/EFI/BOOT
-	cargo build --target x86_64-unknown-uefi
-	cp $(outputFile) build/EFI/BOOT/BootX64.efi
+	cargo build
+	cp src/startup.nsh build/
+	cp $(outputFile) build/EFI/BOOT/BOOTX64.efi
 
 run:build/EFI/BOOT/BootX64.efi
 	$(qemu) $(qemuFlags)
