@@ -31,6 +31,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "kernel"
+version = "0.1.0"
+
+[[package]]
 name = "log"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -40,14 +44,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "os"
+name = "multiboot-bootloader"
 version = "0.1.0"
-dependencies = [
- "log",
- "rlibc",
- "uefi",
- "uefi-services",
-]
 
 [[package]]
 name = "proc-macro2"
@@ -60,24 +58,18 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.7"
+version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa563d17ecb180e500da1cfd2b028310ac758de548efdd203e18f283af693f37"
+checksum = "991431c3519a3f36861882da93630ce66b52918dcf1b8e2fd66b397fc96f28df"
 dependencies = [
  "proc-macro2",
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
 name = "syn"
-version = "1.0.54"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a2af957a63d6bd42255c359c93d9bfdb97076bd3b820897ce55ffbfbf107f44"
+checksum = "a9802ddde94170d186eeee5005b798d9c159fa970403f1be19976d0cfb939b72"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -103,6 +95,15 @@ dependencies = [
  "log",
  "ucs2",
  "uefi-macros",
+]
+
+[[package]]
+name = "uefi-bootloader"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "uefi",
+ "uefi-services",
 ]
 
 [[package]]
@@ -136,9 +137,9 @@ checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
 
 [[package]]
 name = "x86_64"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79872a41412b9f91e72b24ab7f057ba500b5776349c5106d0b2e064e97ff1252"
+checksum = "8f3a6840d540b8dbe400f4ed5afe5816105ee5edebe485299a761d0d8b43cef7"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",

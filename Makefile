@@ -19,9 +19,10 @@ clean:
 
 build/EFI/BOOT/BootX64.efi:src/main.rs
 	mkdir -p build/EFI/BOOT
-	cargo build
-	cp src/startup.nsh build/
+	cargo build -p uefi-bootloader --target x86_64-unknown-uefi -Z build-std=core,compiler_builtins,alloc
+	cp startup.nsh build/
 	cp $(outputFile) build/EFI/BOOT/BOOTX64.efi
 
 run:build/EFI/BOOT/BootX64.efi
 	$(qemu) $(qemuFlags)
+

@@ -1,0 +1,3 @@
+[tasks.echo]
+command = "echo"
+args = ["Hello"]
