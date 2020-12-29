@@ -6,6 +6,7 @@ outputFile = "target/x86_64-unknown-uefi/debug/uefi-bootloader.efi"
 qemu = 	"qemu-system-${targetArch}"
 
 [tasks.clean]
+workspace = false
 command = "rm" 
 args = ["-rf", "build"]
 
@@ -14,6 +15,7 @@ command = "rmdir"
 args = ["\\s", "\\q", "build"]
 
 [tasks.uefi]
+workspace = false
 command = "cargo"
 args = [
 	"build",
@@ -24,18 +26,27 @@ args = [
 ]
 dependencies = ["clean"]
 
-[tasks.emulate]
-description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
+[tasks.drive]
+workspace = false
 script = [
 	"mkdir -p build/EFI/BOOT",
 	"cp startup.nsh build/",
 	"cp ${outputFile} build/EFI/BOOT/BOOTX64.efi",
-
-# Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
-	"${qemu} -nodefaults -vga std -machine q35 -m 128M \\",
-		"-drive if=pflash,format=raw,readonly,file=OVMF_CODE.fd \\",
-		"-drive if=pflash,format=raw,file=OVMF_VARS-1024x768.fd \\",
-		"-drive format=raw,file=fat:rw:build \\",
-		"-serial stdio -monitor vc:1024x768"
 ]
 dependencies = ["uefi"]
+
+[tasks.emulate]
+workspace = false
+description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
+# Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
+command = "${qemu}"
+args = [
+	"-nodefaults", 
+	"-vga", "std", 
+	"-machine", "q35", 
+	"-m", "128M",
+	"-drive", "if=pflash,format=raw,file=OVMF.fd",
+	"-drive", "format=raw,file=fat:rw:build",
+	"-serial", "stdio", "-monitor", "vc:1024x768"
+]
+dependencies = ["drive"]
