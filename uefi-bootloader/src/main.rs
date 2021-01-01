@@ -2,14 +2,14 @@
 #![no_main]
 #![feature(asm)]
 #![feature(abi_efiapi)]
-#![feature(type_ascription)]
 
 extern crate alloc;
 use uefi::prelude::*;
-use uefi::proto::media::fs::SimpleFileSystem;
+//use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::proto::console::gop::GraphicsOutput;
-use uefi::proto::pi::mp::MPServices;
+//use uefi::proto::pi::mp::MPServices;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 #[entry]
 fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -23,140 +23,124 @@ fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
 
     let bs = st.boot_services();
     let rs = st.runtime_services();
-    let stdin = st.stdin();
     
-    // get protocols
+    /* 
+    get protocols
     let mut fs = unsafe { &mut *(bs.locate_protocol::<SimpleFileSystem>()
         .unwrap_success().get()) };
     let mut gop = unsafe { &mut *(bs.locate_protocol::<GraphicsOutput>()
         .unwrap_success().get()) };
     let mut mp = unsafe { &mut *(bs.locate_protocol::<MPServices>()
         .unwrap_success().get()) };
-
+    */
 
     // Print some information
     log::info!("Welcome...");
     log::info!("UEFI Version: {:?}", st.uefi_revision());
-    log::info!("Time: {:?}", rs.get_time().unwrap_success()); 
-    
-    // Wait for commands
-    use core::fmt::Write;
-    use uefi::proto::console::text::Key;
-    use uefi::proto::console::text::ScanCode;
-    st.stdout().enable_cursor(true)
-        .expect_success("The output device does not support making the cursor visible/invisible");
-    loop {
-        write!(st.stdout(), ">\t").unwrap();
-        let mut input_string = String::new();
-        loop {
-            bs.wait_for_event(&mut [st.stdin().wait_for_key_event()])
-                .unwrap_success();
-            match stdin.read_key().unwrap_success().unwrap() {
-                Key::Printable(c) => {
-                    write!(st.stdout(), "{}", c).unwrap(); 
-                    if (c.into(): char) == '\r' {
-                        let (col, row) = st.stdout().cursor_position();
-                        if row < 50 {
-                            st.stdout().set_cursor_position(col, row + 1)
-                                .unwrap_success();
-                        }
-                        break;
-                    } else if (c.into(): char) == '\u{8}' {
-                        input_string.pop();    
-                    } else {
-                        input_string.push(c.into());
-                    }
-                }
-                Key::Special(ScanCode::LEFT) => {
-                    let (col, row) = st.stdout().cursor_position();
-                    if col > 0 {
-                        st.stdout().set_cursor_position(col - 1, row)
-                            .unwrap_success();
-                    }
-                },
-                Key::Special(ScanCode::RIGHT) => {
-                    let (col, row) = st.stdout().cursor_position();
-                    if col < 50 {
-                        st.stdout().set_cursor_position(col + 1, row)
-                            .unwrap_success();
-                    }
-                },
-                Key::Special(ScanCode::UP) => {
-                    let (col, row) = st.stdout().cursor_position();
-                    if row > 0 {
-                        st.stdout().set_cursor_position(col, row - 1)
-                            .unwrap_success();
-                    }
-                },
-                Key::Special(ScanCode::DOWN) => {
-                let (col, row) = st.stdout().cursor_position();
-                    if row < 50 {
-                        st.stdout().set_cursor_position(col, row + 1)
-                            .unwrap_success();
-                    }
-                },
-                Key::Special(c) => write!(st.stdout(), "{:?}", c).unwrap(),
-            }
+    log::info!("Time: {:?}", rs.get_time().unwrap_success());
+    TextModeServices::get_command(&st);
+    Status::SUCCESS
+}
+
+struct Commands {}
+impl Commands {
+    fn shutdown(st: &SystemTable<Boot>) {
+        RuntimeMethods::shutdown(&st);
+    }
+    fn ls() {}
+    fn cd() {}
+    fn rm() {}
+    fn load() {}
+    fn gop() {}
+
+    pub fn execute_command(st: &SystemTable<Boot>, args: &[&str]) {
+        match args {
+            ["shutdown"] => Commands::shutdown(&st),
+            ["ls"] => Commands::ls(),
+            ["cd"] => Commands::cd(),
+            ["rm"] => Commands::rm(),
+            ["load"] => Commands::load(),
+            ["gop"] => Commands::gop(),
+            _ => log::info!("Command Not Found: {}", args[0]),
         }
-        execute_command(&st, &input_string);
-        input_string.clear();
     }
 }
 
-fn execute_command(st: &SystemTable<Boot>, input_string: &String) {
-    let mut args = input_string.split_whitespace();
-    let command = args.next();
-    match command {
+struct GOPMethods {}
+impl GOPMethods {
+    pub fn print_graphics_modes(st: &SystemTable<Boot>) {
+        use core::fmt::Write;
+        let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
+            .expect_success("Failed to locate the GraphicsOutput protocal");
+        for mode in unsafe { &*protocol_ptr.get() }.modes() {
+            write!(st.stdout(), "Mode: {:?}", mode.unwrap().info());
+        }
+    }
 
-        // Shutdown the system
-        Some("shutdown") => {
-            let curr_arg = args.next(); 
-            match curr_arg {
-                None => st.runtime_services()
-                    .reset(ResetType::Shutdown, Status::SUCCESS, None),
-                _ => log::info!("Unrecognized argument \"{}\" for command \"{}\".", curr_arg.unwrap(), command.unwrap()),
+    pub fn change_graphics_mode(st: &SystemTable<Boot>, index: usize) {
+        let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
+            .expect_success("Failed to locate the GraphicsOutput protocal");
+        let mut iter = unsafe{ &*protocol_ptr.get() }.modes();
+
+        unsafe { &mut * protocol_ptr.get() }.set_mode(& (iter.nth(index)
+            .expect("The graphics mode was attempted to be set to an invalid index")
+            .unwrap()));
+    }
+}
+
+struct TextModeServices {}
+impl TextModeServices {
+    // Returns an Error if not in text mode
+    pub fn get_command(st: &SystemTable<Boot>) {
+        use core::fmt::Write;
+        use uefi::proto::console::text::Key;
+        st.stdout().enable_cursor(true)
+            .expect_success("The output device does not support making the cursor visible/invisible");
+        loop {
+            write!(st.stdout(), ">\t").unwrap();
+            let mut input_string = String::new();
+            loop {
+                st.boot_services()
+                    .wait_for_event(&mut [st.stdin().wait_for_key_event()] )
+                    .unwrap_success();
+                match st.stdin().read_key().unwrap_success().unwrap() {
+                    Key::Printable(c) => {
+                        write!(st.stdout(), "{}", c).unwrap(); 
+                        match Into::<char>::into(c) {
+                            '\r' => {
+                                let (col, row) = st.stdout().cursor_position();
+                                let _ = st.stdout().set_cursor_position(col, row + 1);
+                                break;
+                            },
+                            '\u{8}' => drop(input_string.pop()),
+                            foo => input_string.push(foo),
+                        }
+                    }
+                    _ => (),
+                }
             }
-        },
+            Commands::execute_command(&st, 
+                &input_string.split_whitespace().collect::<Vec<_>>());
 
-
-        Some("ls") => log::info!("Not implemented"),
-        Some("cd") => log::info!("Not implemented"),
-        Some("mv") => log::info!("Not implemented"),
-        Some("rm") => log::info!("Not implemented"),
-        Some("load") => log::info!("Not implemented"),
-        _ => log::info!("Command Not Found: {}", input_string),
+            input_string.clear();
+        }
     }
 }
 
-use uefi::table::runtime::ResetType;
-fn shutdown_on_keypress(st: &SystemTable<Boot>) {
+struct RuntimeMethods {}
+impl RuntimeMethods {
     // Shutdown device after key press
-    st.boot_services()
-        .wait_for_event(&mut [st.stdin().wait_for_key_event()])
-        .unwrap_success();
+    pub fn shutdown_on_keypress(st: &SystemTable<Boot>) {
+        use uefi::table::runtime::ResetType;
+        st.boot_services()
+            .wait_for_event(&mut [st.stdin().wait_for_key_event()])
+            .unwrap_success();
 
-    let status: Status = Status::SUCCESS;
-    st.runtime_services()
-        .reset(ResetType::Shutdown, status, None);
-}
-
-fn print_graphics_modes(st: &SystemTable<Boot>) {
-    let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
-        .expect_success("Failed to locate the GraphicsOutput protocall");
-    for mode in unsafe { &*protocol_ptr.get() }.modes() {
-        log::info!("Mode: {:?}", mode.unwrap().info());
-    }
-}
-
-fn change_graphics_mode(st: &SystemTable<Boot>, index: u16) {
-    let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
-        .expect_success("Failed to locate the GraphicsOutput protocall");
-    let mut iter = unsafe{ &*protocol_ptr.get() }.modes();
-     
-    for i in 0..index {
-        iter.next();
-        log::info!("#{}", i);
+        st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);
     }
 
-    unsafe { &mut * protocol_ptr.get() }.set_mode(&iter.next().unwrap().unwrap());
-} 
+    pub fn shutdown(st: &SystemTable<Boot>) {
+        use uefi::table::runtime::ResetType;
+        st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);    
+    }
+}
