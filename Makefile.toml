@@ -26,6 +26,18 @@ args = [
 ]
 dependencies = ["clean"]
 
+[tasks.kernel]
+workspace = false
+command = "cargo"
+args = [
+	"build",
+	"-p", "operating-system",
+	"--bin", "kernel",
+	"--target", "operating-system/x86_64-os.json",
+	"-Z", "build-std=core,compiler_builtins,alloc",
+	"-Z", "build-std-features=compiler-builtins-mem"
+]
+
 [tasks.drive]
 workspace = false
 script = [
