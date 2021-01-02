@@ -1,7 +1,0 @@
-[package]
-name = "kernel"
-version = "0.1.0"
-authors = ["Matt Glen <mwg2202@yahoo.com>"]
-edition = "2018"
-
-[dependencies]
