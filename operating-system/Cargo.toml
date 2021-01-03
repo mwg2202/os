@@ -11,4 +11,6 @@ name = "kernel"
 path = "src/kernel.rs"
 
 [dependencies]
-
+volatile = "0.2.6"
+spinning_top = "0.2.2"
+lazy_static = {version = "1.0", features = ["spin_no_std"]}

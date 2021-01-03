@@ -5,10 +5,9 @@ use core::panic::PanicInfo;
 mod vga;
 
 #[no_mangle]
-pub unsafe fn _start(st: &SystemTable) {
-    (st.boot_services().stdout(), "Hello World");
-    // let mut vga_handler = vga::HANDLER.lock();
-    // vga_handler.write_str("Hello World!");
+pub unsafe fn _start() {
+    let mut vga_handler = vga::HANDLER.lock();
+    vga_handler.write_str("Hello World!");
     loop{}
 }
 

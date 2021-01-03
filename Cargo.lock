@@ -60,6 +60,11 @@ dependencies = [
 [[package]]
 name = "operating-system"
 version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "spinning_top",
+ "volatile",
+]
 
 [[package]]
 name = "proc-macro2"
@@ -136,12 +141,9 @@ dependencies = [
 name = "uefi-bootloader"
 version = "0.1.0"
 dependencies = [
- "lazy_static",
  "log",
- "spinning_top",
  "uefi",
  "uefi-services",
- "volatile",
 ]
 
 [[package]]

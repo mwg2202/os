@@ -2,7 +2,9 @@
 disk = "./build/diskimage.dd"
 parted = "parted -s ${disk} unit s"
 targetArch = "x86_64"
-outputFile = "target/x86_64-unknown-uefi/debug/uefi-bootloader.efi"
+uefiOutputFile = "target/x86_64-unknown-uefi/debug/uefi-bootloader.efi"
+kernelOutputFile = "target/x86_64-os/debug/kernel"
+
 qemu = 	"qemu-system-${targetArch}"
 
 [tasks.clean]
@@ -37,15 +39,17 @@ args = [
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
+dependencies = ["clean"]
 
 [tasks.drive]
 workspace = false
 script = [
 	"mkdir -p build/EFI/BOOT",
 	"cp startup.nsh build/",
-	"cp ${outputFile} build/EFI/BOOT/BOOTX64.efi",
+	"cp ${uefiOutputFile} build/boot.efi",
+	"cp ${kernelOutputFile} build/kernel"
 ]
-dependencies = ["uefi"]
+dependencies = ["uefi", "kernel"]
 
 [tasks.emulate]
 workspace = false
