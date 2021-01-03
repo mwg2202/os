@@ -61,7 +61,7 @@ args = [
 	"-vga", "std", 
 	"-machine", "q35", 
 	"-m", "128M",
-	"-drive", "if=pflash,format=raw,file=OVMF.fd",
+	"-drive", "if=pflash,format=raw,readonly,file=OVMF.fd",
 	"-drive", "format=raw,file=fat:rw:build",
 	"-serial", "stdio", "-monitor", "vc:1024x768"
 ]
