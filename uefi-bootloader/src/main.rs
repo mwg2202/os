@@ -5,6 +5,7 @@
 
 extern crate alloc;
 use uefi::prelude::*;
+mod vga;
 
 #[entry]
 fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -18,8 +19,7 @@ fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
 
     let _bs = st.boot_services();
     let _rs = st.runtime_services();
-    log::info!("Hello World!");
-    loop {
-    }
-}
 
+    
+    loop {}
+}
