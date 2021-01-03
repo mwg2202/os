@@ -144,6 +144,7 @@ dependencies = [
  "log",
  "uefi",
  "uefi-services",
+ "volatile",
 ]
 
 [[package]]
@@ -177,9 +178,9 @@ checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
 
 [[package]]
 name = "volatile"
-version = "0.2.7"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6b06ad3ed06fef1713569d547cdbdb439eafed76341820fb0e0344f29a41945"
+checksum = "8a9dc439ba8353e28f34356cf26f7847e5f15f33ccedde090278fa8ff08f4e10"
 
 [[package]]
 name = "x86_64"

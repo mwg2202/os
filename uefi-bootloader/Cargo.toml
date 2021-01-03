@@ -8,3 +8,4 @@ edition = "2018"
 uefi = "0.7.0"
 uefi-services = "0.4.0"
 log = {version = "0.4.11", default-features = false}
+volatile = "0.4.3"

@@ -56,7 +56,7 @@ const BUFFER_WIDTH: usize = 80;
 /// This represents the vga buffer
 #[repr(transparent)]
 struct Buffer {
-    chars: [[Volatile<BufferCell>; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[Volatile<&'static mut BufferCell>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 
