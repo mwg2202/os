@@ -44,7 +44,7 @@ dependencies = ["clean"]
 [tasks.drive]
 workspace = false
 script = [
-	"mkdir -p build/EFI/BOOT",
+	"mkdir -p build/",
 	"cp startup.nsh build/",
 	"cp ${uefiOutputFile} build/boot.efi",
 	"cp ${kernelOutputFile} build/kernel"
