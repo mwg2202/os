@@ -8,7 +8,6 @@ kernelOutputFile = "target/x86_64-os/debug/kernel"
 qemu = 	"qemu-system-${targetArch}"
 
 [tasks.clean]
-workspace = false
 command = "rm" 
 args = ["-rf", "build"]
 
@@ -17,42 +16,37 @@ command = "rmdir"
 args = ["\\s", "\\q", "build"]
 
 [tasks.uefi]
-workspace = false
 command = "cargo"
 args = [
 	"build",
-	"-p", "uefi-bootloader",
 	"--target", "x86_64-unknown-uefi",
+	"--bin", "uefi-bootloader",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
 dependencies = ["clean"]
 
 [tasks.kernel]
-workspace = false
 command = "cargo"
 args = [
 	"build",
-	"-p", "operating-system",
 	"--bin", "kernel",
-	"--target", "operating-system/x86_64-os.json",
+	"--target", "x86_64-os.json",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
 dependencies = ["clean"]
 
 [tasks.drive]
-workspace = false
 script = [
-	"mkdir -p build/",
-	"cp startup.nsh build/",
-	"cp ${uefiOutputFile} build/boot.efi",
-	"cp ${kernelOutputFile} build/kernel"
+	"mkdir -p drive/",
+	"cp startup.nsh drive/",
+	"cp ${uefiOutputFile} drive/boot.efi",
+	"cp ${kernelOutputFile} drive/kernel"
 ]
 dependencies = ["uefi", "kernel"]
 
 [tasks.emulate]
-workspace = false
 description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
 # Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
 command = "${qemu}"
@@ -62,7 +56,7 @@ args = [
 	"-machine", "q35", 
 	"-m", "128M",
 	"-drive", "if=pflash,format=raw,readonly,file=OVMF.fd",
-	"-drive", "format=raw,file=fat:rw:build",
+	"-drive", "format=raw,file=fat:rw:drive",
 	"-serial", "stdio", "-monitor", "vc:1024x768"
 ]
 dependencies = ["drive"]
