@@ -10,9 +10,11 @@ use uefi::proto::console::gop::GraphicsOutput;
 //use uefi::proto::pi::mp::MPServices;
 use alloc::string::String;
 use alloc::vec::Vec;
+mod Graphics;
+use Graphics::GraphicsSystem;
 
 #[entry]
-fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
+fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     // Initialize utilities (logging, memory allocation...)
     uefi_services::init(&st).expect_success("Failed to initialize utilities");
 
@@ -24,28 +26,51 @@ fn efi_main(_img: uefi::Handle, st: SystemTable<Boot>) -> Status {
     let bs = st.boot_services();
     let rs = st.runtime_services();
     
-    /* 
-    get protocols
-    let mut fs = unsafe { &mut *(bs.locate_protocol::<SimpleFileSystem>()
-        .unwrap_success().get()) };
-    let mut gop = unsafe { &mut *(bs.locate_protocol::<GraphicsOutput>()
-        .unwrap_success().get()) };
-    let mut mp = unsafe { &mut *(bs.locate_protocol::<MPServices>()
-        .unwrap_success().get()) };
-    */
-
     // Print some information
     log::info!("Welcome...");
     log::info!("UEFI Version: {:?}", st.uefi_revision());
     log::info!("Time: {:?}", rs.get_time().unwrap_success());
+    
+    // Initialize the graphics system
+    let mut gs = GraphicsSystem::init(&bs);
+
     TextModeServices::get_command(&st);
     Status::SUCCESS
+}
+
+/// Exits uefi boot services
+fn exit_boot_services(st: SystemTable<Boot>, image: uefi::Handle) {
+    use uefi::table::boot::MemoryDescriptor;
+    use core::mem;
+    use alloc::vec;
+    let max_mmap_size =
+        st.boot_services().memory_map_size()+8*mem::size_of::<MemoryDescriptor>();
+    let mut mmap_storage = vec![0; max_mmap_size].into_boxed_slice();
+    let (st, _iter) = st
+        .exit_boot_services(image, &mut mmap_storage[..])
+        .expect_success("Failed to exit boot services");
+}
+
+/// Shutdowns the device after the next key press
+pub fn shutdown_on_keypress(st: &SystemTable<Boot>) {
+    use uefi::table::runtime::ResetType;
+    st.boot_services()
+        .wait_for_event(&mut [st.stdin().wait_for_key_event()])
+        .unwrap_success();
+
+    st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);
+}
+
+/// Shutsdown the device
+pub fn shutdown(st: &SystemTable<Boot>) {
+    use uefi::table::runtime::ResetType;
+    st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);    
 }
 
 struct Commands {}
 impl Commands {
     fn shutdown(st: &SystemTable<Boot>) {
-        RuntimeMethods::shutdown(&st);
+        shutdown(&st);
     }
     fn ls() {}
     fn cd() {}
@@ -75,16 +100,6 @@ impl GOPMethods {
         for mode in unsafe { &*protocol_ptr.get() }.modes() {
             write!(st.stdout(), "Mode: {:?}", mode.unwrap().info());
         }
-    }
-
-    pub fn change_graphics_mode(st: &SystemTable<Boot>, index: usize) {
-        let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
-            .expect_success("Failed to locate the GraphicsOutput protocal");
-        let mut iter = unsafe{ &*protocol_ptr.get() }.modes();
-
-        unsafe { &mut * protocol_ptr.get() }.set_mode(& (iter.nth(index)
-            .expect("The graphics mode was attempted to be set to an invalid index")
-            .unwrap()));
     }
 }
 
@@ -124,23 +139,5 @@ impl TextModeServices {
 
             input_string.clear();
         }
-    }
-}
-
-struct RuntimeMethods {}
-impl RuntimeMethods {
-    // Shutdown device after key press
-    pub fn shutdown_on_keypress(st: &SystemTable<Boot>) {
-        use uefi::table::runtime::ResetType;
-        st.boot_services()
-            .wait_for_event(&mut [st.stdin().wait_for_key_event()])
-            .unwrap_success();
-
-        st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);
-    }
-
-    pub fn shutdown(st: &SystemTable<Boot>) {
-        use uefi::table::runtime::ResetType;
-        st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);    
     }
 }
