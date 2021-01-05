@@ -2,8 +2,8 @@ use spinning_top::Spinlock;
 use volatile::Volatile;
 use lazy_static::lazy_static;
 
+
 /// The colors supported by the vga protocol
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {

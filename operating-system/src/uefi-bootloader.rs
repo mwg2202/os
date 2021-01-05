@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(asm)]
 #![feature(abi_efiapi)]
+#![allow(dead_code)]
 
 extern crate alloc;
 use uefi::prelude::*;
@@ -26,15 +27,11 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     let bs = st.boot_services();
     let rs = st.runtime_services();
     
-    // Print some information
-    log::info!("Welcome...");
-    log::info!("UEFI Version: {:?}", st.uefi_revision());
-    log::info!("Time: {:?}", rs.get_time().unwrap_success());
-    
     // Initialize the graphics system
     let mut gs = GraphicsSystem::init(&bs);
-
-    TextModeServices::get_command(&st);
+    gs.fill_screen(gs.new_color(255, 0, 0));
+    loop{}
+    //TextModeServices::get_command(&st);
     Status::SUCCESS
 }
 
