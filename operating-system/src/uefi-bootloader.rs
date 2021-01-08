@@ -11,8 +11,8 @@ use uefi::proto::console::gop::GraphicsOutput;
 //use uefi::proto::pi::mp::MPServices;
 use alloc::string::String;
 use alloc::vec::Vec;
-mod Graphics;
-use Graphics::GraphicsSystem;
+mod graphics;
+use graphics::GraphicsSystem;
 
 #[entry]
 fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -32,7 +32,6 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     gs.fill_screen(gs.new_color(255, 0, 0));
     loop{}
     //TextModeServices::get_command(&st);
-    Status::SUCCESS
 }
 
 /// Exits uefi boot services
