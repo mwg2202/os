@@ -2,18 +2,18 @@
 disk = "./build/diskimage.dd"
 parted = "parted -s ${disk} unit s"
 targetArch = "x86_64"
-uefiOutputFile = "target/x86_64-unknown-uefi/debug/uefi-bootloader.efi"
-kernelOutputFile = "target/x86_64-os/debug/kernel"
+uefiOutputFile = "target/x86_64-unknown-uefi/release/uefi-bootloader.efi"
+kernelOutputFile = "target/x86_64-os/release/kernel"
 
 qemu = 	"qemu-system-${targetArch}"
 
 [tasks.clean]
 command = "rm" 
-args = ["-rf", "build"]
+args = ["-rf", "drive"]
 
 [tasks.clean.windows]
 command = "rmdir"
-args = ["\\s", "\\q", "build"]
+args = ["\\s", "\\q", "drive"]
 
 [tasks.uefi]
 command = "cargo"
@@ -21,6 +21,7 @@ args = [
 	"build",
 	"--target", "x86_64-unknown-uefi",
 	"--bin", "uefi-bootloader",
+	"--release",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
@@ -32,6 +33,7 @@ args = [
 	"build",
 	"--bin", "kernel",
 	"--target", "x86_64-os.json",
+	"--release",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
@@ -39,18 +41,19 @@ dependencies = ["clean"]
 
 [tasks.drive]
 script = [
-	"mkdir -p drive/",
+	"mkdir -p drive/EFI/BOOT",
 	"cp startup.nsh drive/",
-	"cp ${uefiOutputFile} drive/boot.efi",
+	"cp -r fonts drive/fonts",
+	"cp ${uefiOutputFile} drive/EFI/BOOT/BOOTX64.efi",
 	"cp ${kernelOutputFile} drive/kernel"
 ]
 dependencies = ["uefi", "kernel"]
 
 [tasks.emulate]
 description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
-# Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
 command = "${qemu}"
 args = [
+# Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
 	"-nodefaults", 
 	"-vga", "std", 
 	"-machine", "q35", 

@@ -29,7 +29,8 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     
     // Initialize the graphics system
     let mut gs = GraphicsSystem::init(&bs);
-    gs.fill_screen(gs.new_color(255, 0, 0));
+    gs.fill_screen(gs.new_color(247, 237, 237));
+    gs.draw_rectangle(gs.new_color(168, 126, 126), 100, 200, 100, 100);
     loop{}
     //TextModeServices::get_command(&st);
 }

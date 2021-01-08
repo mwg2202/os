@@ -31,7 +31,6 @@ impl GraphicsSystem<'_> {
                     match best_mode {
                         None => best_mode = Some(mode),
                         Some(ref m) => {
-                            
                             // Get the best resolution mode
                             let (width, height) = mode.info().resolution();
                             let (bw, bh) = m.info().resolution();
@@ -39,7 +38,6 @@ impl GraphicsSystem<'_> {
                             if (width > bw) || (height > bh) {
                                 best_mode = Some(mode);
                             }
-                        
                         },
                     }
                 },
@@ -65,7 +63,16 @@ impl GraphicsSystem<'_> {
     pub fn fill_screen(&mut self, color: Color) { 
         let (width, height) = self.current_mode.info().resolution();
         self.draw_rectangle(color, width, height, 0, 0);
-    
+        let pixels = width * height;
+        /*
+        unsafe {
+            asm!(
+                "rep stos   dword ptr [edi]", 
+                in("ecx") pixels,
+                in("edi") self.frame_buffer,
+                in("eax") 0x00ffffff
+            )
+        }*/
     }
 
     /// Creates a new color that follows the format of the current graphics mode
@@ -115,7 +122,7 @@ impl GraphicsSystem<'_> {
         }
         
         // If the rectangle would be drawn completely off screen (bottom or right)
-         if (y > screen_height) | (x > screen_width){
+         if (y > screen_height) | (x > screen_width) {
             return;
         }
             
