@@ -64,9 +64,11 @@ dependencies = [
  "lazy_static",
  "log",
  "spinning_top",
+ "ttf-parser",
  "uefi",
  "uefi-services",
  "volatile",
+ "x86_64 0.13.1",
 ]
 
 [[package]]
@@ -120,6 +122,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ttf-parser"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62ddb402ac6c2af6f7a2844243887631c4e94b51585b229fcfddb43958cd55ca"
+
+[[package]]
 name = "ucs2"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,7 +168,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "log",
  "uefi",
- "x86_64",
+ "x86_64 0.12.4",
 ]
 
 [[package]]
@@ -180,6 +188,16 @@ name = "x86_64"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f3a6840d540b8dbe400f4ed5afe5816105ee5edebe485299a761d0d8b43cef7"
+dependencies = [
+ "bit_field 0.9.0",
+ "bitflags",
+]
+
+[[package]]
+name = "x86_64"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d74944372d63f31dd39fce1ef8036143484ff4cd4efcd743ef50135839de4e7"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",

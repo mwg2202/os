@@ -12,7 +12,8 @@ use uefi::proto::console::gop::GraphicsOutput;
 use alloc::string::String;
 use alloc::vec::Vec;
 mod graphics;
-use graphics::GraphicsSystem;
+use graphics::GraphicsBuffer;
+use graphics::FRAME_BUFFER;
 
 #[entry]
 fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -27,8 +28,8 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     let bs = st.boot_services();
     let rs = st.runtime_services();
     
-    // Initialize the graphics system
-    let mut gs = GraphicsSystem::init(&bs);
+    // Get the graphics frame-buffer
+    let mut gs = GraphicsBuffer::init(&bs);
     gs.fill_screen(gs.new_color(247, 237, 237));
     gs.draw_rectangle(gs.new_color(168, 126, 126), 100, 200, 100, 100);
     loop{}

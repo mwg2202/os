@@ -5,15 +5,122 @@ use uefi::table::boot::BootServices;
 use uefi::proto::console::gop::PixelFormat;
 use core::convert::TryInto;
 
-pub struct GraphicsSystem<'a> {
-    current_mode: Mode,
-    graphics_output: &'a mut GraphicsOutput<'a>,
-    frame_buffer: *mut Color,
+
+/// Fills a buffer with a certain color
+pub fn fill_buffer(buffer: &mut GraphicsBuffer, color: Pixel) { 
+    let (width, height) = self.current_mode.info().resolution();
+    self.block_transfer(color, width, height, 0, 0);
 }
-impl GraphicsSystem<'_> {
-    /// Set up the the graphics system
-    pub fn init(bs: &BootServices) -> GraphicsSystem {
+
+
+/// Copies src_buffer to dst_buffer
+/// This treats src_buffer as a "block" of memory and copies
+/// it as if it was drawing a rectangle to dst_buffer
+pub fn block_transfer(src_buffer: GraphicsBuffer, 
+        dst_buffer: GraphicsBuffer, x: isize, y: isize) {
+    
+    let (src_width, src_height) = src_buffer.size();
+    let (dst_width, dst_height) = dst_buffer.size();
+    let dst_width: isize = dst_width.try_into().unwrap();
+    let dst_height: isize = dst_height.try_into().unwrap();
+    let block_width: isize = block_width.try_into().unwrap();
+    let block_height: isize = block_height.try_into().unwrap();
+    // Check if the rectangle will be out of range
+    let mut y = y;
+    let mut x = x;
+    let mut block_height: isize = block_height.try_into()
+        .expect("A height too large was specified");
+    let mut block_width: isize = block_width.try_into()
+        .expect("A width too large was specified");
+
+    // If the rectangle would be drawn partly off screen (top)
+    if y < 0 {
+        block_height += y;
+            
+        // If the rectangle would be drawn completely off screen (top)
+        if block_height < 0 {
+            return;
+        }
+        y = 0; 
+    }
+
+    // If the rectangle is drawn partly off screen (left)
+    if x < 0 {
+        block_width += x;
+
+        // If the rectangle would be drawn completely off screen (left)
+        if block_width < 0 {
+            return;
+        }
+        x = 0;
+    }
+    
+    // If the rectangle would be drawn completely off screen (bottom or right)
+     if (y > dst_height) | (x > dst_width) {
+        return;
+    }
         
+    // If the rectangle is drawn partly off screen (bottom)
+    if dst_height < (y + block_height) {
+        block_height = dst_height - y;
+    }
+
+    // If the rectangle is drawn partly off screen (right)
+    if dst_width < (x + block_width) {
+        block_width = dst_width - x;
+    }
+
+    let mut dst_ptr = unsafe { dst_buffer.buffer.offset(y * dst_width + x) };
+    for _ in 0..block_height {
+        for i in 0..block_width {
+            // Write a pixel from the destination buffer to the source buffer
+            unsafe { 
+                core::ptr::write_volatile(
+                    dst_ptr.offset(i), *src_ptr.offset(i)
+                );
+            }
+        }
+        dst_ptr = unsafe { dst_ptr.offset(dst_width) };
+        src_buffer = unsafe { dst_ptr.offset(block_width) };
+    }
+}
+
+
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+/// A structure representing a formatted color
+pub struct Pixel {
+    inner: [u8; 4],
+}
+impl Pixel {
+    /// Creates a new color object following a given pixel-format
+    pub fn new(red: u8, blue: u8, green: u8, format: PixelFormat) -> Pixel {
+        match format {
+            PixelFormat::RGB => Pixel { inner: [red, blue, green, 0] },
+            PixelFormat::BGR => Pixel { inner: [blue, green, red, 0] },
+            _ => panic!("Unkown format: {:?}", format),
+        }
+    }
+    
+}
+
+
+struct GraphicsBuffer {
+    /// A pointer to the buffer
+    buffer: *mut Pixel,
+    /// The size of the buffer in pixels in (width, height)
+    size: (usize, usize),
+    /// The format of each pixel in the buffer
+    format: PixelFormat,
+}
+
+impl GraphicsBuffer {
+    /// Creates a new color that follows the format of the buffer
+    pub fn new_color(&self, red: u8, blue: u8, green: u8) -> Pixel {
+        Pixel::new(red, blue, green, self.current_mode.info().pixel_format()) 
+    }
+
+    pub fn init(&mut bs: BootServices) {
         // Get the graphics output protocol
         let graphics_output =
             unsafe {&mut *(bs.locate_protocol::<GraphicsOutput>()
@@ -52,137 +159,10 @@ impl GraphicsSystem<'_> {
         graphics_output.set_mode(&best_mode).unwrap_success();
 
         // Make a structure out of the information
-        GraphicsSystem {
-            current_mode: best_mode,
-            frame_buffer: graphics_output.frame_buffer().as_mut_ptr() as *mut Color,
-            graphics_output: graphics_output,
+        GraphicsBuffer {
+            frame_buffer: graphics_output.frame_buffer().as_mut_ptr() as *mut Pixel,
+            size: best_mode.info().resolution(),
+            format: best_mode.info().pixel_format(),
         }
     }
-
-    /// Fill the screen with a certain color
-    pub fn fill_screen(&mut self, color: Color) { 
-        let (width, height) = self.current_mode.info().resolution();
-        self.draw_rectangle(color, width, height, 0, 0);
-        let pixels = width * height;
-        /*
-        unsafe {
-            asm!(
-                "rep stos   dword ptr [edi]", 
-                in("ecx") pixels,
-                in("edi") self.frame_buffer,
-                in("eax") 0x00ffffff
-            )
-        }*/
-    }
-
-    /// Creates a new color that follows the format of the current graphics mode
-    pub fn new_color(&self, red: u8, blue: u8, green: u8) -> Color {
-    
-        Color::new(red, blue, green, self.current_mode.info().pixel_format())
-    
-    }
-
-    /// Draws a rectangle with the top-left corner at (x, y) 
-    /// and with the specified height, width, and color
-    pub fn draw_rectangle(&mut self, color: Color, 
-        width: usize, height: usize, x: isize, y: isize) {
-        
-        let (screen_width, screen_height) = self.current_mode.info().resolution();
-        let screen_width: isize = screen_width.try_into().unwrap();
-        let screen_height: isize = screen_height.try_into().unwrap();
-
-        // Check if the rectangle will be out of range
-        let mut y = y;
-        let mut x = x;
-        let mut height: isize = height.try_into()
-            .expect("A height too large was specified");
-        let mut width: isize = width.try_into()
-            .expect("A width too large was specified");
-
-        // If the rectangle would be drawn partly off screen (top)
-        if y < 0 {
-            height += y;
-                
-            // If the rectangle would be drawn completely off screen (top)
-            if height < 0 {
-                return;
-            }
-            y = 0; 
-        }
-
-        // If the rectangle is drawn partly off screen (left)
-        if x < 0 {
-            width += x;
-
-            // If the rectangle would be drawn completely off screen (left)
-            if width < 0 {
-                return;
-            }
-            x = 0;
-        }
-        
-        // If the rectangle would be drawn completely off screen (bottom or right)
-         if (y > screen_height) | (x > screen_width) {
-            return;
-        }
-            
-        // If the rectangle is drawn partly off screen (bottom)
-        if screen_height < (y + height) {
-            height = screen_height - y;
-        }
-
-        // If the rectangle is drawn partly off screen (right)
-        if screen_width < (x + width) {
-            width = screen_width - x;
-        }
-
-        // Optimize if possible
-        if (x == 0) & (width == screen_width) {
-            let ptr = unsafe { self.frame_buffer.offset(y * screen_width) };
-            for i in 0..(height * width) {
-                unsafe { core::ptr::write_volatile(ptr.offset(i), color); }
-            }
-        } else {
-            let mut ptr = unsafe { self.frame_buffer.offset(y * screen_width + x) };
-            for _ in 0..height {
-                for i in 0..width {
-                    unsafe { core::ptr::write_volatile(ptr.offset(i), color); }
-                }
-                ptr = unsafe { ptr.offset(screen_width) };
-            }
-        }
-    }
-
-    /// Draws a circle with the center at (x, y) and with the specified
-    /// radius and color.
-    pub fn draw_circle(&mut self, color: Color, radius: usize, x: isize, y: isize) {
-        
-        let (screen_width, screen_height) = self.current_mode.info().resolution();
-        let screen_width: isize = screen_width.try_into().unwrap();
-        let screen_height: isize = screen_height.try_into().unwrap();
-        let radius: isize = screen_height.try_into()
-            .expect("A radius too large was spciefied");
-
-        // This points to the far-left point of the circle
-        let ptr = unsafe { self.frame_buffer.offset(y * screen_width + x - radius) };
-        unsafe { core::ptr::write_volatile(ptr, color); }
-    }
-}
-
-#[repr(transparent)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-/// A structure representing a formatted color
-pub struct Color {
-    inner: [u8; 4],
-}
-impl Color {
-    /// Creates a new color object following a given pixel-format
-    pub fn new(red: u8, blue: u8, green: u8, format: PixelFormat) -> Color {
-        match format {
-            PixelFormat::RGB => Color { inner: [red, blue, green, 0] },
-            PixelFormat::BGR => Color { inner: [blue, green, red, 0] },
-            _ => panic!("Unkown format: {:?}", format),
-        }
-    }
-    
 }
