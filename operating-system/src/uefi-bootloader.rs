@@ -3,6 +3,7 @@
 #![feature(asm)]
 #![feature(abi_efiapi)]
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 extern crate alloc;
 use uefi::prelude::*;
@@ -13,10 +14,10 @@ use alloc::string::String;
 use alloc::vec::Vec;
 mod graphics;
 use graphics::GraphicsBuffer;
-use graphics::FRAME_BUFFER;
+use graphics::fill_buffer;
 
 #[entry]
-fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
+fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     // Initialize utilities (logging, memory allocation...)
     uefi_services::init(&st).expect_success("Failed to initialize utilities");
 
@@ -29,9 +30,8 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     let rs = st.runtime_services();
     
     // Get the graphics frame-buffer
-    let mut gs = GraphicsBuffer::init(&bs);
-    gs.fill_screen(gs.new_color(247, 237, 237));
-    gs.draw_rectangle(gs.new_color(168, 126, 126), 100, 200, 100, 100);
+    let gb = GraphicsBuffer::init(&bs);
+    fill_buffer(&gb, gb.new_color(247, 237, 237));
     loop{}
     //TextModeServices::get_command(&st);
 }
@@ -96,7 +96,7 @@ impl GOPMethods {
         let protocol_ptr = st.boot_services().locate_protocol::<GraphicsOutput>()
             .expect_success("Failed to locate the GraphicsOutput protocal");
         for mode in unsafe { &*protocol_ptr.get() }.modes() {
-            write!(st.stdout(), "Mode: {:?}", mode.unwrap().info());
+            write!(st.stdout(), "Mode: {:?}", mode.unwrap().info()).unwrap();
         }
     }
 }

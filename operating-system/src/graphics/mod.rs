@@ -1,5 +1,4 @@
 use uefi::proto::console::gop::GraphicsOutput;
-use uefi::proto::console::gop::Mode;
 use uefi::prelude::*;
 use uefi::table::boot::BootServices;
 use uefi::proto::console::gop::PixelFormat;
@@ -7,20 +6,21 @@ use core::convert::TryInto;
 
 
 /// Fills a buffer with a certain color
-pub fn fill_buffer(buffer: &mut GraphicsBuffer, color: Pixel) { 
-    let (width, height) = self.current_mode.info().resolution();
-    self.block_transfer(color, width, height, 0, 0);
+pub fn fill_buffer(buffer: &GraphicsBuffer, color: Pixel) { 
+    let (width, height) = buffer.size;
+    for i in 0..(width*height) {
+        unsafe { core::ptr::write_volatile(buffer.ptr.offset(i.try_into().unwrap()), color); }
+    }
 }
-
 
 /// Copies src_buffer to dst_buffer
 /// This treats src_buffer as a "block" of memory and copies
 /// it as if it was drawing a rectangle to dst_buffer
-pub fn block_transfer(src_buffer: GraphicsBuffer, 
-        dst_buffer: GraphicsBuffer, x: isize, y: isize) {
+pub fn block_transfer(src_buffer: &GraphicsBuffer, 
+        dst_buffer: &GraphicsBuffer, x: isize, y: isize) {
     
-    let (src_width, src_height) = src_buffer.size();
-    let (dst_width, dst_height) = dst_buffer.size();
+    let (dst_width, dst_height) = dst_buffer.size;
+    let (block_width, block_height) = src_buffer.size;
     let dst_width: isize = dst_width.try_into().unwrap();
     let dst_height: isize = dst_height.try_into().unwrap();
     let block_width: isize = block_width.try_into().unwrap();
@@ -70,7 +70,8 @@ pub fn block_transfer(src_buffer: GraphicsBuffer,
         block_width = dst_width - x;
     }
 
-    let mut dst_ptr = unsafe { dst_buffer.buffer.offset(y * dst_width + x) };
+    let mut dst_ptr = unsafe { dst_buffer.ptr.offset(y * dst_width + x) };
+    let mut src_ptr = src_buffer.ptr;
     for _ in 0..block_height {
         for i in 0..block_width {
             // Write a pixel from the destination buffer to the source buffer
@@ -81,7 +82,7 @@ pub fn block_transfer(src_buffer: GraphicsBuffer,
             }
         }
         dst_ptr = unsafe { dst_ptr.offset(dst_width) };
-        src_buffer = unsafe { dst_ptr.offset(block_width) };
+        src_ptr = unsafe { src_ptr.offset(block_width) };
     }
 }
 
@@ -105,9 +106,9 @@ impl Pixel {
 }
 
 
-struct GraphicsBuffer {
+pub struct GraphicsBuffer {
     /// A pointer to the buffer
-    buffer: *mut Pixel,
+    ptr: *mut Pixel,
     /// The size of the buffer in pixels in (width, height)
     size: (usize, usize),
     /// The format of each pixel in the buffer
@@ -117,10 +118,10 @@ struct GraphicsBuffer {
 impl GraphicsBuffer {
     /// Creates a new color that follows the format of the buffer
     pub fn new_color(&self, red: u8, blue: u8, green: u8) -> Pixel {
-        Pixel::new(red, blue, green, self.current_mode.info().pixel_format()) 
+        Pixel::new(red, blue, green, self.format) 
     }
 
-    pub fn init(&mut bs: BootServices) {
+    pub fn init(bs: &BootServices) -> GraphicsBuffer {
         // Get the graphics output protocol
         let graphics_output =
             unsafe {&mut *(bs.locate_protocol::<GraphicsOutput>()
@@ -160,7 +161,7 @@ impl GraphicsBuffer {
 
         // Make a structure out of the information
         GraphicsBuffer {
-            frame_buffer: graphics_output.frame_buffer().as_mut_ptr() as *mut Pixel,
+            ptr: graphics_output.frame_buffer().as_mut_ptr() as *mut Pixel,
             size: best_mode.info().resolution(),
             format: best_mode.info().pixel_format(),
         }
