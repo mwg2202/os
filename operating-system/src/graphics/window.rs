@@ -2,6 +2,7 @@ pub struct ApplicationInstance {
     aid: u8,
     /// A vector of the windows owned by the application
     child_windows: Vec<&Window>,
+    page_table
 }
 impl Program {
     pub fn start() {
