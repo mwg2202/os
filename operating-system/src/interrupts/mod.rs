@@ -1,14 +1,14 @@
 #![feature(abi_x86_interrupt)]
 
-#[path = ".."]
-mod graphics;
-
 use x86_64::structures::idt::InterruptDescriptorTable;
-use graphics::GraphicsSystem;
 use lazy_static::lazy_static;
 
-pub fn init_idt() {
+
+/// Enables interrupts and sets up the IDT
+pub fn enable() {
     IDT.load();
+    apic::init_lapic();
+    apic::init_iopic();
 }
 
 extern "x86-interrupt" fn divide_error_handler(
@@ -44,8 +44,8 @@ extern "x86-interrupt" fn device_not_available_handler(
     stack_frame: &mut InterruptStackFrame) {
 }
 
-extern "x86-interrupt" fn double_fault_handler -> ! (
-    stack_frame: &mut InterruptStackFrame, error_code: u64) {
+extern "x86-interrupt" fn double_fault_handler (
+    stack_frame: &mut InterruptStackFrame, error_code: u64) -> ! {
 }
 
 extern "x86-interrupt" fn invalid_tss_handler(
@@ -76,8 +76,8 @@ extern "x86-interrupt" fn alignment_check_handler(
     stack_frame: &mut InterruptStackFrame, error_code: u64) {
 }
 
-extern "x86-interrupt" fn machine_check_handler -> !(
-    stack_frame: &mut InterruptStackFrame) {
+extern "x86-interrupt" fn machine_check_handler (
+    stack_frame: &mut InterruptStackFrame) -> ! {
 }
 
 extern "x86-interrupt" fn simd_floating_point_handler(

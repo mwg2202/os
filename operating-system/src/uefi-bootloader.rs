@@ -20,10 +20,16 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect_success("Failed to reset output buffer");
 
-    let bs = st.boot_services();
-    let rs = st.runtime_services();
-    let sys_info = system::get_system_info(&st);
-    system::check_compatability(&st, &sys_info);
+    let sys_handles = system::get_handles(&st);
+    let platform_info = match system::get_platform_info(&sys_handles) {
+            Ok(i) => i,
+            Err(e) => system::crash(&st, e),
+    };
+    let apic = match system::find_apic(&platform_info) {
+            Ok(a) => a,
+            Err(e) => system::crash(&st, e),
+    };
+
     system::shutdown_on_keypress(&st);
 }
 

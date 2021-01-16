@@ -1,21 +1,22 @@
 use uefi::prelude::*;
 use rsdp::Rsdp;
-use acpi::{PhysicalMapping, AcpiTables};
+use acpi::{PhysicalMapping, AcpiTables, AcpiError};
+use acpi::platform::{PlatformInfo, Apic};
 use uefi::table::cfg::{ACPI2_GUID, ACPI_GUID};
-use log::{error, info};
+use log::{info};
 
-pub struct SystemInfo {
+pub struct SystemHandles {
     acpi: Option<&'static Rsdp>,
     acpi2: Option<&'static Rsdp>,
 }
 
-// For some reason, the locate_handle function of the UEFI crate was not finding
-// the RSDP for ACPI. So this function searches through the UEFI config table to
-// find it
-pub fn get_system_info(st: &SystemTable<Boot>) -> SystemInfo {
+/// For some reason, the locate_handle function of the UEFI crate was not finding
+/// the RSDP for ACPI. So this function searches through the UEFI config table to
+/// find it and other handles.
+pub fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
     
     // Create a struct to hold the system info
-    let mut sys_info = SystemInfo {
+    let mut sys_handles = SystemHandles {
         acpi: None,
         acpi2: None,
     };
@@ -26,60 +27,61 @@ pub fn get_system_info(st: &SystemTable<Boot>) -> SystemInfo {
     // Gather system information from the config table
     for entry in cfg_table {
         if entry.guid == ACPI_GUID { 
-            sys_info.acpi = Some(unsafe { core::mem::transmute(entry.address) });
+            sys_handles.acpi = Some(unsafe { core::mem::transmute(entry.address) });
         }
         if entry.guid == ACPI2_GUID { 
-            sys_info.acpi2 = Some(unsafe { core::mem::transmute(entry.address) }); 
+            sys_handles.acpi2 = Some(unsafe { core::mem::transmute(entry.address) }); 
         }
     }
 
     // Return the system info
-    sys_info
+    sys_handles
 }
 
+#[derive(Debug)]
+pub enum Errors {
+    AcpiHandleNotFound,
+    CouldNotFindApic,
+    AcpiError(AcpiError),
+}
+
+
 /// Checks the system to make sure that it is compatible with the os
-pub fn check_compatability(st: &SystemTable<Boot>, sys_info: &SystemInfo) {
-    if sys_info.acpi.is_none() && sys_info.acpi2.is_none() {
-        error!("The ACPI GUID was not found");
-        shutdown_on_keypress(&st);
+pub fn get_platform_info(sys_handles: &SystemHandles) 
+                                    -> Result<PlatformInfo, Errors> {
+    if sys_handles.acpi.is_none() && sys_handles.acpi2.is_none() {
+        return Err(Errors::AcpiHandleNotFound);
     }
 
     let rsdp;
-    if sys_info.acpi2.is_none() {
+    if sys_handles.acpi2.is_none() {
         info!("Using ACPI v1");
-        rsdp = sys_info.acpi.unwrap();
+        rsdp = sys_handles.acpi.unwrap();
     } else {
         info!("Using ACPI v2");
-        rsdp = sys_info.acpi2.unwrap();
+        rsdp = sys_handles.acpi2.unwrap();
     }
 
-    let acpi_table: AcpiTables<AcpiHandlerStruct>;
     let handler: AcpiHandlerStruct = AcpiHandlerStruct {number: 5};
+    let acpi_tables: AcpiTables<AcpiHandlerStruct>;
     match unsafe { AcpiTables::from_rsdp(handler, (rsdp as *const Rsdp) as usize) } {
-        Err(error) => {
-            error!("{:?}", error);
-            shutdown_on_keypress(&st);
-        },
-        Ok(table) => acpi_table = table,
-    }
+        Err(e) => return Err(Errors::AcpiError(e)),
+        Ok(t) => acpi_tables = t,
+    };
 
-    match acpi_table.platform_info() {
-        Err(error) => error!("Error getting platform info: {:?}", error),
-        Ok(platform_info) => {
-            info!("Power Platform: {:?}", platform_info.power_profile);
-            match platform_info.interrupt_model {
-                acpi::InterruptModel::Apic(apic) => {
-                    info!("Apic Found: {:?}", apic);
-                    if apic.also_has_legacy_pics {
-                        // Remap and mask all the lines of the legacy PIC.
-                    }
-                }
-                Unknown => {
-                    error!("Could not find APIC details on system. Most likely only the legacy i8259 PIC is present. The legacy i8259 PIC is currently not supported.");
-                    shutdown_on_keypress(&st);
-                },
-            }
-        }
+    match acpi_tables.platform_info() {
+        Err(e) => Err(Errors::AcpiError(e)),
+        Ok(platform_info) => Ok(platform_info),
+    }
+}
+
+pub fn find_apic(platform_info: &PlatformInfo) -> Result<&Apic, Errors> {
+    match &platform_info.interrupt_model {
+        acpi::InterruptModel::Apic(apic) => {
+            info!("Apic Found: {:?}", apic);
+            Ok(apic)
+        },
+        _ => Err(Errors::CouldNotFindApic),
     }
 }
 
@@ -117,4 +119,10 @@ pub fn shutdown_on_keypress(st: &SystemTable<Boot>) -> ! {
 pub fn shutdown(st: &SystemTable<Boot>) {
     use uefi::table::runtime::ResetType;
     st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);    
+}
+
+use log::error;
+pub fn crash(st: &SystemTable<Boot>, e: Errors) -> ! {
+    error!("{:?}", e);
+    shutdown_on_keypress(st);
 }
