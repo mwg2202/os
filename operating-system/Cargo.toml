@@ -26,3 +26,5 @@ x86_64 = "0.13.1"
 acpi = "2.2.0"
 rsdp = "1.1.0"
 aml = "0.10.0"
+once_cell = { version = "1.5.2", default-features = false }
+x2apic = { git = "https://github.com/kwzhao/x2apic-rs" }

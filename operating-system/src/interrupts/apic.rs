@@ -2,9 +2,9 @@ pub fn init_lapic {
     use x2apic::lapic::{LocalApic, LocalApicBuilder};
 
     let lapic = LocalApicBuilder::new()
-        .timer_vector(timer_index)
-        .error_vector(error_index)
-        .spurious_vector(spurious_index)
+        .timer_vector(0xFFF)
+        .error_vector(0xFFFF)
+        .spurious_vector(0xFF)
         .build()
         .unwrap_or_else(|err| panic!("{}", err));
 
@@ -14,7 +14,7 @@ pub fn init_lapic {
 
 pub fn init_ioapic {
     use x2apic::ioapic::{IoApic, IrqFlags, IrqMode};
-    
+
     /// !!! Map the IOAPIC's MMIO address `addr` here !!!
     
     unsafe {
@@ -30,3 +30,4 @@ pub fn init_ioapic {
         );
     }
 }
+

@@ -1,9 +1,9 @@
-use uefi::prelude::*;
+use acpi::platform::{Apic, PlatformInfo};
+use acpi::{AcpiError, AcpiTables, PhysicalMapping};
+use log::info;
 use rsdp::Rsdp;
-use acpi::{PhysicalMapping, AcpiTables, AcpiError};
-use acpi::platform::{PlatformInfo, Apic};
+use uefi::prelude::*;
 use uefi::table::cfg::{ACPI2_GUID, ACPI_GUID};
-use log::{info};
 
 pub struct SystemHandles {
     acpi: Option<&'static Rsdp>,
@@ -14,7 +14,6 @@ pub struct SystemHandles {
 /// the RSDP for ACPI. So this function searches through the UEFI config table to
 /// find it and other handles.
 pub fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
-    
     // Create a struct to hold the system info
     let mut sys_handles = SystemHandles {
         acpi: None,
@@ -23,14 +22,14 @@ pub fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
 
     // Get the UEFI config table
     let cfg_table = st.config_table();
-    
+
     // Gather system information from the config table
     for entry in cfg_table {
-        if entry.guid == ACPI_GUID { 
-            sys_handles.acpi = Some(unsafe { core::mem::transmute(entry.address) });
+        if entry.guid == ACPI_GUID {
+            sys_handles.acpi = Some(unsafe { &*(entry.address as *const Rsdp) });
         }
-        if entry.guid == ACPI2_GUID { 
-            sys_handles.acpi2 = Some(unsafe { core::mem::transmute(entry.address) }); 
+        if entry.guid == ACPI2_GUID {
+            sys_handles.acpi2 = Some(unsafe { &*(entry.address as *const Rsdp) });
         }
     }
 
@@ -44,35 +43,23 @@ pub enum Errors {
     CouldNotFindApic,
     AcpiError(AcpiError),
 }
-
+impl From<AcpiError> for Errors {
+    fn from(orig: AcpiError) -> Self {
+        Self::AcpiError(orig)
+    }
+}
 
 /// Checks the system to make sure that it is compatible with the os
-pub fn get_platform_info(sys_handles: &SystemHandles) 
-                                    -> Result<PlatformInfo, Errors> {
-    if sys_handles.acpi.is_none() && sys_handles.acpi2.is_none() {
-        return Err(Errors::AcpiHandleNotFound);
-    }
+pub fn get_platform_info(sys_handles: &SystemHandles) -> Result<PlatformInfo, Errors> {
+    let rsdp = sys_handles
+        .acpi2
+        .or(sys_handles.acpi)
+        .ok_or(Errors::AcpiHandleNotFound)?;
 
-    let rsdp;
-    if sys_handles.acpi2.is_none() {
-        info!("Using ACPI v1");
-        rsdp = sys_handles.acpi.unwrap();
-    } else {
-        info!("Using ACPI v2");
-        rsdp = sys_handles.acpi2.unwrap();
-    }
+    let handler = AcpiHandlerStruct { number: 0 };
+    let acpi_tables = unsafe { AcpiTables::from_rsdp(handler, (rsdp as *const Rsdp) as usize) }?;
 
-    let handler: AcpiHandlerStruct = AcpiHandlerStruct {number: 5};
-    let acpi_tables: AcpiTables<AcpiHandlerStruct>;
-    match unsafe { AcpiTables::from_rsdp(handler, (rsdp as *const Rsdp) as usize) } {
-        Err(e) => return Err(Errors::AcpiError(e)),
-        Ok(t) => acpi_tables = t,
-    };
-
-    match acpi_tables.platform_info() {
-        Err(e) => Err(Errors::AcpiError(e)),
-        Ok(platform_info) => Ok(platform_info),
-    }
+    Ok(acpi_tables.platform_info()?)
 }
 
 pub fn find_apic(platform_info: &PlatformInfo) -> Result<&Apic, Errors> {
@@ -80,7 +67,7 @@ pub fn find_apic(platform_info: &PlatformInfo) -> Result<&Apic, Errors> {
         acpi::InterruptModel::Apic(apic) => {
             info!("Apic Found: {:?}", apic);
             Ok(apic)
-        },
+        }
         _ => Err(Errors::CouldNotFindApic),
     }
 }
@@ -90,12 +77,16 @@ struct AcpiHandlerStruct {
     number: u8,
 }
 impl acpi::AcpiHandler for AcpiHandlerStruct {
-    unsafe fn map_physical_region<T>(&self, physical_address: usize, 
-        size: usize ) -> PhysicalMapping<Self, T> {
+    unsafe fn map_physical_region<T>(
+        &self,
+        physical_start: usize,
+        size: usize,
+    ) -> PhysicalMapping<Self, T> {
+        use core::ptr::NonNull;
+
         PhysicalMapping {
-            physical_start: physical_address,
-            virtual_start: 
-                core::ptr::NonNull::<T>::new_unchecked(physical_address as *mut T),
+            physical_start,
+            virtual_start: NonNull::new_unchecked(physical_start as *mut T),
             region_length: core::mem::size_of::<T>(),
             mapped_length: core::mem::size_of::<T>(),
             handler: *self,
@@ -108,17 +99,20 @@ impl acpi::AcpiHandler for AcpiHandlerStruct {
 /// Shutdowns the device after the next key press
 pub fn shutdown_on_keypress(st: &SystemTable<Boot>) -> ! {
     use uefi::table::runtime::ResetType;
+
     st.boot_services()
         .wait_for_event(&mut [st.stdin().wait_for_key_event()])
         .unwrap_success();
 
-    st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);
+    st.runtime_services()
+        .reset(ResetType::Shutdown, Status::SUCCESS, None);
 }
 
 /// Shutsdown the device
 pub fn shutdown(st: &SystemTable<Boot>) {
     use uefi::table::runtime::ResetType;
-    st.runtime_services().reset(ResetType::Shutdown, Status::SUCCESS, None);    
+    st.runtime_services()
+        .reset(ResetType::Shutdown, Status::SUCCESS, None);
 }
 
 use log::error;

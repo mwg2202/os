@@ -22,12 +22,13 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
 
     let sys_handles = system::get_handles(&st);
     let platform_info = match system::get_platform_info(&sys_handles) {
-            Ok(i) => i,
-            Err(e) => system::crash(&st, e),
+        Ok(i) => i,
+        Err(e) => system::crash(&st, e),
     };
+
     let apic = match system::find_apic(&platform_info) {
-            Ok(a) => a,
-            Err(e) => system::crash(&st, e),
+        Ok(a) => a,
+        Err(e) => system::crash(&st, e),
     };
 
     system::shutdown_on_keypress(&st);
@@ -35,13 +36,13 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
 
 /// Exits uefi boot services
 fn exit_boot_services(st: SystemTable<Boot>, image: uefi::Handle) {
-    use uefi::table::boot::MemoryDescriptor;
-    use core::mem;
     use alloc::vec;
+    use core::mem;
+    use uefi::table::boot::MemoryDescriptor;
     let max_mmap_size =
-        st.boot_services().memory_map_size()+8*mem::size_of::<MemoryDescriptor>();
-    let mut mmap_storage = vec![0; max_mmap_size].into_boxed_slice();
+        st.boot_services().memory_map_size() + 8 * mem::size_of::<MemoryDescriptor>();
+    let mut mmap_storage = vec![0; max_mmap_size];
     let (st, _iter) = st
-        .exit_boot_services(image, &mut mmap_storage[..])
+        .exit_boot_services(image, &mut mmap_storage)
         .expect_success("Failed to exit boot services");
 }
