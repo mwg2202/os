@@ -35,14 +35,18 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         Err(e) => system::crash(&st, e),
     };
     
+    
+
     let gb = graphics::GraphicsBuffer::init(&st.boot_services());
     graphics::fill_buffer(&gb, gb.new_color(100, 0, 0));
+    
+    exit_boot_services(st, image);
 
-    //exit_boot_services(st, image);
     //system::gdt::init();
     //interrupts::enable();
     
-    system::shutdown_on_keypress(&st);
+    //system::shutdown_on_keypress(&st);
+    loop {}
 }
 
 /// Exits uefi boot services

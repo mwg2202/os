@@ -4,6 +4,7 @@ use uefi::proto::console::gop::GraphicsOutput;
 use uefi::proto::console::gop::PixelFormat;
 use uefi::table::boot::BootServices;
 pub mod fonts;
+pub mod vga;
 
 /// Fills a buffer with a certain color
 pub fn fill_buffer(buffer: &GraphicsBuffer, color: Pixel) {

@@ -1,25 +1,12 @@
 #[repr(transparent)]
-struct ntfs_boot_sector {
-    jmp: [i8; 3],
-    oem_system: [u8; 8], // Char type
-    bytes_per_sector: u16,
-    sectors_per_cluster: i8,
-    reserved_sector_count: u16,
-    table_count: i8,
-    root_entry_count: u16,
-    sector_count: u16,
-    media_type: i8,
-    sectors_per_table: u16,
-    sectors_per_track: u16,
-    heads: u16,
-    hidden_sector_count: u32,
-    sector_count_32: u32,
+struct NtfsBootSector {
+    fat_boot_sector: FatBootSector,
     reserved: u32,
     sector_count_64: u64,
 }
 
 #[repr(transparent)]
-struct ntfs_specific_header {
+struct NtfsSpecificHeader {
     master_file_table_cluster: u64,
     master_file_table_mirror_cluster: u64,
     clusters_per_record: i8,
@@ -31,7 +18,7 @@ struct ntfs_specific_header {
 }
 
 #[repr(transparent)]
-struct master_file_table {
+struct MasterFileTable {
     record_type: [u8; 4], // Char type
     update_sequence_offset: u16,
     update_sequence_length: u16,
