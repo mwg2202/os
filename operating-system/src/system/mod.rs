@@ -4,6 +4,9 @@ use log::info;
 use rsdp::Rsdp;
 use uefi::prelude::*;
 use uefi::table::cfg::{ACPI2_GUID, ACPI_GUID};
+pub mod gdt;
+pub mod apic;
+pub mod interrupts;
 
 pub struct SystemHandles {
     acpi: Option<&'static Rsdp>,

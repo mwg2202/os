@@ -5,10 +5,13 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+#![feature(abi_x86_interrupt)]
+
 extern crate alloc;
 use uefi::prelude::*;
 mod graphics;
 mod system;
+use system::interrupts;
 
 #[entry]
 fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -19,8 +22,9 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     st.stdout()
         .reset(false)
         .expect_success("Failed to reset output buffer");
-
+    
     let sys_handles = system::get_handles(&st);
+    
     let platform_info = match system::get_platform_info(&sys_handles) {
         Ok(i) => i,
         Err(e) => system::crash(&st, e),
@@ -30,7 +34,14 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         Ok(a) => a,
         Err(e) => system::crash(&st, e),
     };
+    
+    let gb = graphics::GraphicsBuffer::init(&st.boot_services());
+    graphics::fill_buffer(&gb, gb.new_color(100, 0, 0));
 
+    //exit_boot_services(st, image);
+    //system::gdt::init();
+    //interrupts::enable();
+    
     system::shutdown_on_keypress(&st);
 }
 

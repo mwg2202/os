@@ -110,7 +110,6 @@ pub struct GraphicsBuffer {
     /// The format of each pixel in the buffer
     format: PixelFormat,
 }
-
 impl GraphicsBuffer {
     /// Creates a new color that follows the format of the buffer
     pub fn new_color(&self, red: u8, blue: u8, green: u8) -> Pixel {

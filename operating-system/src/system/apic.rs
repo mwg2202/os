@@ -1,4 +1,5 @@
-pub fn init_lapic {
+/*
+pub fn init_lapic() {
     use x2apic::lapic::{LocalApic, LocalApicBuilder};
 
     let lapic = LocalApicBuilder::new()
@@ -12,10 +13,10 @@ pub fn init_lapic {
     
 }
 
-pub fn init_ioapic {
+pub fn init_ioapic() {
     use x2apic::ioapic::{IoApic, IrqFlags, IrqMode};
 
-    /// !!! Map the IOAPIC's MMIO address `addr` here !!!
+    //Map the IOAPIC's MMIO address `addr` here
     
     unsafe {
         let ioapic = IoApic::new(addr);
@@ -30,4 +31,4 @@ pub fn init_ioapic {
         );
     }
 }
-
+*/

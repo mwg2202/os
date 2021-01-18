@@ -1,9 +1,12 @@
-#![feature(abi_x86_interrupt)]
 use log::info;
+use crate::system::gdt;
 
-use x86_64::structures::idt::InterruptDescriptorTable;
+use x86_64::structures::idt::{
+    InterruptDescriptorTable, 
+    InterruptStackFrame,
+    PageFaultErrorCode,
+};
 use lazy_static::lazy_static;
-
 
 /// Enables interrupts and sets up the IDT
 pub fn enable() {
@@ -53,6 +56,7 @@ extern "x86-interrupt" fn device_not_available_handler(
 extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut InterruptStackFrame, error_code: u64) -> ! {
     info!("double_fault");
+    loop{}
 }
 
 extern "x86-interrupt" fn invalid_tss_handler(
@@ -62,7 +66,8 @@ extern "x86-interrupt" fn invalid_tss_handler(
 
 extern "x86-interrupt" fn segment_not_present_handler(
     stack_frame: &mut InterruptStackFrame, error_code: u64) {
-    info!("segment_not_present");
+    info!("segment_not_present: err_code={}", error_code);
+    info!("InterruptStackFrame: {:?}", stack_frame);
 }
 
 extern "x86-interrupt" fn stack_segment_fault_handler(
@@ -72,7 +77,7 @@ extern "x86-interrupt" fn stack_segment_fault_handler(
 
 extern "x86-interrupt" fn general_protection_fault_handler(
     stack_frame: &mut InterruptStackFrame, error_code: u64) {
-    info!("general_protection_fault");
+    info!("general_protection_fault: err_code={}", error_code);
 }
 
 extern "x86-interrupt" fn page_fault_handler(
@@ -93,6 +98,7 @@ extern "x86-interrupt" fn alignment_check_handler(
 extern "x86-interrupt" fn machine_check_handler(
     stack_frame: &mut InterruptStackFrame) -> ! {
     info!("machine_check");
+    loop {}
 }
 
 extern "x86-interrupt" fn simd_floating_point_handler(
@@ -126,7 +132,10 @@ lazy_static! {
         idt.bound_range_exceeded.set_handler_fn(bound_range_exceeded_handler);
         idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
         idt.device_not_available.set_handler_fn(device_not_available_handler);
-        idt.double_fault.set_handler_fn(double_fault_handler);
+        unsafe {
+            idt.double_fault.set_handler_fn(double_fault_handler)
+                .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
+        }
         idt.invalid_tss.set_handler_fn(invalid_tss_handler);
         idt.segment_not_present.set_handler_fn(segment_not_present_handler);
         idt.stack_segment_fault.set_handler_fn(stack_segment_fault_handler);
@@ -142,6 +151,7 @@ lazy_static! {
         idt[TIMER].set_handler_fn(timer_handler);
         idt[APIC_ERROR].set_handler_fn(apic_error_handler);
         idt[SPURIOUS_VECTOR].set_handler_fn(spurious_vector_handler);
+
         idt
     };
 }
@@ -158,4 +168,3 @@ extern "x86-interrupt" fn apic_error_handler(stack_frame: &mut InterruptStackFra
 extern "x86-interrupt" fn spurious_vector_handler(stack_frame: &mut InterruptStackFrame) {
     info!("spurious_vector");
 }
-
