@@ -1,4 +1,5 @@
 #[repr(transparent)]
+#[derive(Debug)]
 struct NtfsBootSector {
     fat_boot_sector: FatBootSector,
     reserved: u32,
@@ -6,6 +7,7 @@ struct NtfsBootSector {
 }
 
 #[repr(transparent)]
+#[derive(Debug)]
 struct NtfsSpecificHeader {
     master_file_table_cluster: u64,
     master_file_table_mirror_cluster: u64,
@@ -18,6 +20,7 @@ struct NtfsSpecificHeader {
 }
 
 #[repr(transparent)]
+#[derive(Debug)]
 struct MasterFileTable {
     record_type: [u8; 4], // Char type
     update_sequence_offset: u16,
