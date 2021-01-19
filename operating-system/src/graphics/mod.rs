@@ -3,8 +3,11 @@ use uefi::prelude::*;
 use uefi::proto::console::gop::GraphicsOutput;
 use uefi::proto::console::gop::PixelFormat;
 use uefi::table::boot::BootServices;
+use rusttype::{Font, Scale, point};
+use libm::ceilf;
 pub mod fonts;
 pub mod vga;
+use core::convert::FloatToInt;
 
 /// Fills a buffer with a certain color
 pub fn fill_buffer(buffer: &GraphicsBuffer, color: Pixel) {
@@ -83,26 +86,6 @@ pub fn block_transfer(
     }
 }
 
-#[repr(transparent)]
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-/// A structure representing a formatted color
-pub struct Pixel {
-    inner: [u8; 4],
-}
-impl Pixel {
-    /// Creates a new color object following a given pixel-format
-    pub fn new(red: u8, blue: u8, green: u8, format: PixelFormat) -> Pixel {
-        match format {
-            PixelFormat::RGB => Pixel {
-                inner: [red, blue, green, 0],
-            },
-            PixelFormat::BGR => Pixel {
-                inner: [blue, green, red, 0],
-            },
-            _ => panic!("Unkown format: {:?}", format),
-        }
-    }
-}
 
 pub struct GraphicsBuffer {
     /// A pointer to the buffer
@@ -114,10 +97,25 @@ pub struct GraphicsBuffer {
 }
 impl GraphicsBuffer {
     /// Creates a new color that follows the format of the buffer
-    pub fn new_color(&self, red: u8, blue: u8, green: u8) -> Pixel {
-        Pixel::new(red, blue, green, self.format)
+    pub fn new_pixel(&self, color: Color) -> Pixel {
+        Pixel::new(color, self.format)
     }
 
+    pub fn color_from_pixel(&self, p: Pixel) -> Color {
+        match self.format {
+            PixelFormat::RGB => Color {
+                red: p.inner[0],
+                green: p.inner[1],
+                blue: p.inner[2],
+            },
+            PixelFormat::BGR => Color {
+                blue: p.inner[0],
+                green: p.inner[1],
+                red: p.inner[2],
+            },
+            _ => panic!("Unkown format: {:?}", self.format),
+        }
+    }
     pub fn init(bs: &BootServices) -> GraphicsBuffer {
         // Get the graphics output protocol
         let graphics_output = bs
@@ -164,6 +162,108 @@ impl GraphicsBuffer {
             ptr: graphics_output.frame_buffer().as_mut_ptr() as *mut Pixel,
             size: best_mode.info().resolution(),
             format: best_mode.info().pixel_format(),
+        }
+    }
+
+    /// Write a string to a buffer
+    pub fn write_text(&self, string: &str, x: isize, 
+                      y: isize, font: &Font, height: f32, c: Color) {
+        
+        let (buffer_width, buffer_height) = self.size;
+        let buffer_width = buffer_width as isize;
+
+        let ptr = unsafe { 
+            self.ptr.offset(y * buffer_width + x) 
+        };
+
+        let scale = Scale {
+            x: height,
+            y: height,
+        };
+        let v_metrics = font.v_metrics(scale);
+        //let offset = point(0.0, v_metrics.ascent); 
+        let offset = point(0.0, 0.0);
+        let glyphs = font.layout(string, scale, offset);
+        /*
+        let width = glyphs.rev().map(|g| g.position().x as f32 + 
+            g.unpositioned().h_metrics().advance_width).next().unwrap_or(0.0)
+            .ceil() as usize;
+        */
+    
+        // Go through each glyph in the string
+        for g in glyphs {
+            if let Some(bb) = g.pixel_bounding_box() {
+                
+                // Draw the glyph
+                g.draw(|x, y, v| {
+                    let x = (x as i32 + bb.min.x) as isize;
+                    let y = (y as i32 + bb.min.y) as isize;
+                    
+                    // Gets the pixel that was previously in this location
+                    let old_p = unsafe { 
+                        core::ptr::read_volatile(ptr.offset(x + y * buffer_width))
+                    };
+                    let old_c = self.color_from_pixel(old_p);
+
+                    // Gets the old colors from the pixel
+                    let or = old_c.red as f32;
+                    let og = old_c.green as f32;
+                    let ob = old_c.blue as f32;
+
+                    // Gets the font-color
+                    let r = c.red as f32;
+                    let g = c.green as f32;
+                    let b = c.blue as f32;
+
+                    // Calculates the new color values
+                    let nr = ((or * (1.0-v)) + (r * v)) as u8;
+                    let ng = ((og * (1.0-v)) + (g * v)) as u8;
+                    let nb = ((ob * (1.0-v)) + (b * v)) as u8;
+
+                    unsafe {
+                        core::ptr::write_volatile(
+                            ptr.offset(x + y * buffer_width), 
+                            self.new_pixel(Color::new(nr, ng, nb))
+                        );
+                    }
+                })
+            }
+        }
+    }
+}
+
+#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+/// A structure representing a formatted color
+pub struct Pixel {
+    inner: [u8; 4],
+}
+impl Pixel {
+    /// Creates a new color object following a given pixel-format
+    pub fn new(c: Color, format: PixelFormat) -> Pixel {
+        match format {
+            PixelFormat::RGB => Pixel {
+                inner: [c.red, c.green, c.blue, 0],
+            },
+            PixelFormat::BGR => Pixel {
+                inner: [c.blue, c.green, c.red, 0],
+            },
+            _ => panic!("Unkown format: {:?}", format),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct Color {
+    red: u8,
+    green: u8,
+    blue: u8,
+} impl Color {
+    pub fn new(red: u8, green: u8, blue: u8) -> Color {
+        Color {
+            red,
+            green,
+            blue,
         }
     }
 }

@@ -44,6 +44,7 @@ pub fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
 pub enum Errors {
     AcpiHandleNotFound,
     CouldNotFindApic,
+    CouldNotFindSystemFont,
     AcpiError(AcpiError),
 }
 impl From<AcpiError> for Errors {

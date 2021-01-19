@@ -6,15 +6,19 @@
 #![allow(unused_variables)]
 
 #![feature(abi_x86_interrupt)]
+#![feature(convert_float_to_int)]
 
 extern crate alloc;
 use uefi::prelude::*;
 mod graphics;
 mod system;
 use system::interrupts;
+use graphics::fonts;
+use graphics::Color;
+use system::Errors;
 
 #[entry]
-fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
+fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     // Initialize utilities (logging, memory allocation...)
     uefi_services::init(&st).expect_success("Failed to initialize utilities");
 
@@ -35,18 +39,22 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         Err(e) => system::crash(&st, e),
     };
     
-    
+    let system_font = match fonts::init() {
+        Some(f) => f,
+        None => system::crash(&st, Errors::CouldNotFindSystemFont),
+    };
 
     let gb = graphics::GraphicsBuffer::init(&st.boot_services());
-    graphics::fill_buffer(&gb, gb.new_color(100, 0, 0));
-    
-    exit_boot_services(st, image);
+    let font_color = Color::new(255, 255, 255);
+    gb.write_text("Hello World!", 50, 50, &system_font, 50.0, font_color);
+
+    //exit_boot_services(st, image);
 
     //system::gdt::init();
     //interrupts::enable();
     
-    //system::shutdown_on_keypress(&st);
-    loop {}
+    system::shutdown_on_keypress(&st);
+    //loop {}
 }
 
 /// Exits uefi boot services
