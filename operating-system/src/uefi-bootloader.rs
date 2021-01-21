@@ -44,7 +44,7 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         None => system::crash(&st, Errors::CouldNotFindSystemFont),
     };
 
-    let gb = graphics::GraphicsBuffer::init(&st.boot_services());
+    let gb = graphics::Buffer::init(&st.boot_services());
 
     //system::gdt::init();
     //interrupts::enable();
@@ -53,7 +53,7 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     gb.write_text("System Successfully Loaded!", 
                   50, 50, &system_font, 50.0, Color::new(255, 255, 255));
     
-    exit_boot_services(st, image);
+    // exit_boot_services(st, image);
     loop {}
 }
 

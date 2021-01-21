@@ -12,3 +12,4 @@ pub unsafe fn _start() {
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
+
