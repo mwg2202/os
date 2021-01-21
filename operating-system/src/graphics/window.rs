@@ -1,4 +1,4 @@
-use super::{Color, Screen, Size, Location, Buffer, BufferTrait};
+use super::{Color, Screen, Size, Location, Buffer, BufferTrait, PixelFormat};
 use alloc::vec::Vec;
 
 #[derive(Debug)]
@@ -14,9 +14,6 @@ pub struct ProcessInstance {
 pub struct Window {
     /// The Process ID of the program that owns the window
     pid: u8,
-    
-    /// The size of the window in pixels
-    size: Size,
     
     /// The location of the top-left corner of the window
     location: Location,
@@ -38,22 +35,21 @@ pub enum WindowStatus {
 
 #[derive(Debug)]
 pub struct WindowManager {
-    screen: Screen,
     windows: Vec<Window>,
 } impl WindowManager {
     /// Creates a new WindowManager object
-    pub fn new(screen: Screen) -> WindowManager {
+    pub fn new() -> WindowManager {
         WindowManager {
-            screen,
             windows: Vec::<Window>::new(),
         }
     }
-    pub fn create_window(&mut self, pid: u8, size: Size, location: Location) {
+    pub fn create_window(&mut self, pid: u8, size: Size, location: Location, fmt: PixelFormat) {
+        let mut buffer = Buffer::new(size, fmt);
+        buffer.fill(Color::new(255, 255, 255));
         let window = Window {
             pid,
-            size,
             location,
-            buffer: Buffer::new(size, self.screen.fmt()),
+            buffer,
             status: WindowStatus::Open,
         };
         self.windows.push(window);
@@ -68,15 +64,15 @@ pub struct WindowManager {
             None => (),
         }
     }
-    fn draw(&mut self) {
+    pub fn draw(&mut self, screen: &mut Screen) {
         // Draw the gui
-        self.screen.fill(Color::new(0, 0, 0));
+        screen.fill(Color::new(0, 0, 0));
         
         // Draw the windows
-        for i in 1..self.windows.len() {
+        for i in 0..self.windows.len() {
             if self.windows[i].status == WindowStatus::Minimized {continue;}
             let loc = self.windows[i].location;
-            self.screen.block_transfer(&mut self.windows[i].buffer, loc);
+            screen.block_transfer(&mut self.windows[i].buffer, loc);
         }
     }
 }

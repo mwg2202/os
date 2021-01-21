@@ -13,7 +13,7 @@ use uefi::prelude::*;
 mod graphics;
 mod system;
 use system::interrupts;
-use graphics::{fonts, Color, BufferTrait, Location};
+use graphics::{fonts, Color, BufferTrait, Size, Location, WindowManager, PixelFormat};
 use system::Errors;
 
 #[entry]
@@ -44,13 +44,17 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     };
 
     let mut gb = graphics::Screen::init(&st.boot_services());
+    let mut wm = WindowManager::new();
 
     //system::gdt::init();
     //interrupts::enable();
    
     gb.fill(Color::new(0, 255, 0));
-    gb.write_text("System Successfully Loaded!", Location {x:50, y:50}, 
+    gb.write_text("System Successfully Loaded!", Location {x:50, y:50},
                   &system_font, 50.0, Color::new(255, 255, 255));
+    
+    wm.create_window(0, Size {width:100, height:100}, Location {x:100, y:100}, gb.fmt());
+    wm.draw(&mut gb);
     
     // exit_boot_services(st, image);
     loop {}

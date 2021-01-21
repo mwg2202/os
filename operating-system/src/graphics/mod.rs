@@ -2,7 +2,7 @@ pub mod fonts;
 pub mod vga;
 
 mod window;
-pub use window::Window;
+pub use window::{Window, WindowManager};
 
 mod screen;
 pub use screen::Screen;
