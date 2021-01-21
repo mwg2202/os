@@ -10,7 +10,6 @@ pub extern "C" fn fmaxf(x: f32, y: f32) -> f32 {
     libm::fmaxf(x, y)
 }
 
-
 use rusttype::Font;
 pub fn init() -> Option<Font<'static>> {
     let system_font: &[u8; 171656]

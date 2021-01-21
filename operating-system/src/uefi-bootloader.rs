@@ -45,16 +45,16 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     };
 
     let gb = graphics::GraphicsBuffer::init(&st.boot_services());
-    let font_color = Color::new(255, 255, 255);
-    gb.write_text("Hello World!", 50, 50, &system_font, 50.0, font_color);
-
-    //exit_boot_services(st, image);
 
     //system::gdt::init();
     //interrupts::enable();
     
-    system::shutdown_on_keypress(&st);
-    //loop {}
+    graphics::fill_buffer(&gb, Color::new(0, 255, 0));
+    gb.write_text("System Successfully Loaded!", 
+                  50, 50, &system_font, 50.0, Color::new(255, 255, 255));
+    
+    exit_boot_services(st, image);
+    loop {}
 }
 
 /// Exits uefi boot services

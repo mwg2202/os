@@ -10,11 +10,12 @@ pub mod vga;
 use core::convert::FloatToInt;
 
 /// Fills a buffer with a certain color
-pub fn fill_buffer(buffer: &GraphicsBuffer, color: Pixel) {
+pub fn fill_buffer(buffer: &GraphicsBuffer, color: Color) {
+    let pixel = buffer.new_pixel(color);
     let (width, height) = buffer.size;
     for i in 0..(width * height) {
         unsafe {
-            core::ptr::write_volatile(buffer.ptr.offset(i.try_into().unwrap()), color);
+            core::ptr::write_volatile(buffer.ptr.offset(i.try_into().unwrap()), pixel);
         }
     }
 }
