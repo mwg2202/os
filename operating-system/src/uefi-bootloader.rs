@@ -13,8 +13,7 @@ use uefi::prelude::*;
 mod graphics;
 mod system;
 use system::interrupts;
-use graphics::fonts;
-use graphics::Color;
+use graphics::{fonts, Color, BufferTrait, Location};
 use system::Errors;
 
 #[entry]
@@ -44,14 +43,14 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         None => system::crash(&st, Errors::CouldNotFindSystemFont),
     };
 
-    let gb = graphics::Buffer::init(&st.boot_services());
+    let mut gb = graphics::Screen::init(&st.boot_services());
 
     //system::gdt::init();
     //interrupts::enable();
-    
-    graphics::fill_buffer(&gb, Color::new(0, 255, 0));
-    gb.write_text("System Successfully Loaded!", 
-                  50, 50, &system_font, 50.0, Color::new(255, 255, 255));
+   
+    gb.fill(Color::new(0, 255, 0));
+    gb.write_text("System Successfully Loaded!", Location {x:50, y:50}, 
+                  &system_font, 50.0, Color::new(255, 255, 255));
     
     // exit_boot_services(st, image);
     loop {}

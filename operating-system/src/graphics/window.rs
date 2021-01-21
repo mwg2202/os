@@ -1,4 +1,7 @@
-/// An instance of a process
+use super::{Color, Screen, Size, Location, Buffer, BufferTrait};
+use alloc::vec::Vec;
+
+#[derive(Debug)]
 pub struct ProcessInstance {
     /// The Process ID associated with the instance
     pid: u8,
@@ -7,77 +10,73 @@ pub struct ProcessInstance {
     windows: Vec<Window>,
 }
 
-/// A window
+#[derive(Debug)]
 pub struct Window {
     /// The Process ID of the program that owns the window
     pid: u8,
     
-    width: u16,
-    height: u16,
+    /// The size of the window in pixels
+    size: Size,
     
-    /// The (x, y) location of the window
-    location: (i16, i16),
+    /// The location of the top-left corner of the window
+    location: Location,
     
     /// A pointer to the buffer that the window can draw to
-    buffer: Box<Buffer>,
-    
+    buffer: Buffer,
+   
+    /// The current status of the window
     status: WindowStatus,
 } 
 
-enum WindowStatus {
-    open,
-    minimized,
-    fullscreen,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum WindowStatus {
+    Open,
+    Minimized,
+    Fullscreen,
 }
 
 
+#[derive(Debug)]
 pub struct WindowManager {
     screen: Screen,
     windows: Vec<Window>,
 } impl WindowManager {
     /// Creates a new WindowManager object
-    pub fn new(screen: Screen) {
+    pub fn new(screen: Screen) -> WindowManager {
         WindowManager {
             screen,
-            windows: Vec<Box<Window>>::new(),
+            windows: Vec::<Window>::new(),
         }
     }
-
-    pub fn create_window(&self, pid: u8, size: Size, location: Location) {
-        window = Window {
+    pub fn create_window(&mut self, pid: u8, size: Size, location: Location) {
+        let window = Window {
             pid,
             size,
             location,
-            buffer: Box(Buffer::new(size)),
-            status: WindowStatus::open,
-        }
-        self.windows.push(Box::new(window));
+            buffer: Buffer::new(size, self.screen.fmt()),
+            status: WindowStatus::Open,
+        };
+        self.windows.push(window);
     }
-    pub fn destroy_window(&self, window: &Window) {
-        for (i, w) in self.windows.enumerate() {
-            if &w == &window {
-                self.windows.pop(i);
-            }
+    pub fn destroy_window(&mut self, pid: u8) {
+        // Get the index of the specified window
+        let index = self.windows.iter().position(|w| w.pid == pid);
+
+        // Delete the window from the vector
+        match index {
+            Some(index) => {self.windows.remove(index);},
+            None => (),
         }
     }
-    fn draw(&self) {
+    fn draw(&mut self) {
         // Draw the gui
-        fill_buffer(self.screen, Color::new(0, 0, 0));
+        self.screen.fill(Color::new(0, 0, 0));
         
         // Draw the windows
-        for window in windows {
-            if window.status == minimized {continue;}
-            block_transfer(window.buffer, screen, window.location)
+        for i in 1..self.windows.len() {
+            if self.windows[i].status == WindowStatus::Minimized {continue;}
+            let loc = self.windows[i].location;
+            self.screen.block_transfer(&mut self.windows[i].buffer, loc);
         }
     }
-}
-
-pub struct Location {
-    x: isize,
-    y: isize,
-}
-
-pub struct Size {
-    width: usize,
-    height: usize,
 }
