@@ -13,10 +13,8 @@ pub struct Screen {
 impl Screen {
     pub fn init(bs: &BootServices) -> Screen {
         // Get the graphics output protocol
-        let graphics_output = bs
-            .locate_protocol::<GraphicsOutput>()
-            .unwrap_success()
-            .get();
+        let graphics_output = bs.locate_protocol::<GraphicsOutput>()
+            .unwrap_success().get();
 
         let graphics_output = unsafe { &mut *(graphics_output) };
 

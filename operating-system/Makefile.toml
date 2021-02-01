@@ -1,11 +1,5 @@
 [env]
-disk = "./build/diskimage.dd"
-parted = "parted -s ${disk} unit s"
-targetArch = "x86_64"
-uefiOutputFile = "target/x86_64-unknown-uefi/release/uefi-bootloader.efi"
-kernelOutputFile = "target/x86_64-os/release/kernel"
-
-qemu = 	"qemu-system-${targetArch}"
+outputFile = "target/x86_64-unknown-uefi/release/uefi.efi"
 
 [tasks.clean]
 command = "rm" 
@@ -19,39 +13,36 @@ args = ["\\s", "\\q", "drive"]
 command = "cargo"
 args = [
 	"build",
+	"--bin", "uefi",
 	"--target", "x86_64-unknown-uefi",
-	"--bin", "uefi-bootloader",
 	"--release",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
-dependencies = ["clean"]
 
-[tasks.kernel]
+[tasks.mb2]
 command = "cargo"
 args = [
 	"build",
-	"--bin", "kernel",
+	"--bin", "mb2",
 	"--target", "x86_64-os.json",
 	"--release",
 	"-Z", "build-std=core,compiler_builtins,alloc",
 	"-Z", "build-std-features=compiler-builtins-mem"
 ]
-dependencies = ["clean"]
 
 [tasks.drive]
 script = [
 	"mkdir -p drive/EFI/BOOT",
 	"cp startup.nsh drive/",
 	"cp -r fonts drive/fonts",
-	"cp ${uefiOutputFile} drive/EFI/BOOT/BOOTX64.efi",
-	"cp ${kernelOutputFile} drive/kernel"
+	"cp ${outputFile} drive/EFI/BOOT/BOOTX64.efi",
 ]
-dependencies = ["uefi", "kernel"]
+dependencies = ["uefi", "mb2"]
 
 [tasks.emulate]
 description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
-command = "${qemu}"
+command = "qemu-system-x86_64"
 args = [
 # Flags from https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
 	"-nodefaults", 
@@ -62,4 +53,4 @@ args = [
 	"-drive", "format=raw,file=fat:rw:drive",
 	"-serial", "stdio", "-monitor", "vc:1024x768"
 ]
-dependencies = ["drive"]
+dependencies = ["clean", "drive"]

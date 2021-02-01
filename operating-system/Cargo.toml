@@ -7,20 +7,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "kernel"
-path = "src/kernel.rs"
+name = "uefi"
+path = "src/uefi-entry.rs"
 
 [[bin]]
-name = "uefi-bootloader"
-path = "src/uefi-bootloader.rs"
+name = "mb2"
+path = "src/mb2-entry.rs"
 
 [dependencies]
 volatile = "0.4.3"
-spinning_top = "0.2.2"
 lazy_static = { version = "1.0", features = ["spin_no_std"] }
 uefi = "0.7.0"
-uefi-services = "0.4.0"
-log = { version = "0.4.11", default-features = false }
+multiboot2 = "0.10.1"
 x86_64 = "0.13.1"
 acpi = "2.2.0"
 rsdp = "1.1.0"
@@ -29,3 +27,4 @@ once_cell = { version = "1.5.2", default-features = false }
 x2apic = { git = "https://github.com/kwzhao/x2apic-rs" }
 rusttype = { version = "0.9.2", default-features = false, features = ["libm-math"]}
 libm = "0.2.1"
+linked_list_allocator = "0.8.0"
