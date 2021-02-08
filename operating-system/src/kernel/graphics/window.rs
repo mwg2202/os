@@ -1,3 +1,4 @@
+extern crate alloc;
 use super::{Color, Screen, Size, Location, Buffer, BufferTrait, PixelFormat};
 use alloc::vec::Vec;
 

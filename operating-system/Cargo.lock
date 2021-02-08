@@ -12,8 +12,7 @@ dependencies = [
 [[package]]
 name = "acpi"
 version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "588edec856d4efbd20b3a04279e3ceada79d652c7b459fa094881dd946998790"
+source = "git+https://github.com/rust-osdev/acpi#501b18023cc8c1f9ae0739ed5075df3ba9861b83"
 dependencies = [
  "bit_field 0.10.1",
  "log",
@@ -23,8 +22,7 @@ dependencies = [
 [[package]]
 name = "aml"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45c1b12889aa22efe6fddefa6f729e21dc60e75ea66c66edc7bcefba51935a0a"
+source = "git+https://github.com/rust-osdev/acpi#501b18023cc8c1f9ae0739ed5075df3ba9861b83"
 dependencies = [
  "bit_field 0.10.1",
  "byteorder",
@@ -79,7 +77,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
- "spin",
+ "spin 0.5.2",
 ]
 
 [[package]]
@@ -125,12 +123,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "once_cell"
-version = "1.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
-
-[[package]]
 name = "operating-system"
 version = "0.1.0"
 dependencies = [
@@ -140,9 +132,9 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "multiboot2",
- "once_cell",
  "rsdp",
  "rusttype",
+ "spin 0.7.1",
  "uefi",
  "volatile",
  "x2apic",
@@ -248,6 +240,12 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
 
 [[package]]
 name = "spinning_top"

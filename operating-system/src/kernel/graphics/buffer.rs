@@ -1,3 +1,4 @@
+extern crate alloc;
 use super::{Size, PixelFormat, Pixel, Color, Location};
 use alloc::vec::Vec;
 use alloc::vec;
@@ -87,7 +88,7 @@ pub trait BufferTrait {
 		height: f32, 
 		c: Color
 	) {        
-        let (buffer_width, buffer_height) = self.size().tuple();
+        let (buffer_width, _h) = self.size().tuple();
         let buffer_width = buffer_width as isize;
 
         let ptr = unsafe { 
@@ -98,8 +99,7 @@ pub trait BufferTrait {
             x: height,
             y: height,
         };
-        let v_metrics = font.v_metrics(scale);
-        //let offset = point(0.0, v_metrics.ascent); 
+        
         let offset = point(0.0, 0.0);
         let glyphs = font.layout(string, scale, offset);
     

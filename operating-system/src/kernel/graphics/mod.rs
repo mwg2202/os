@@ -1,5 +1,4 @@
 pub mod fonts;
-pub mod vga;
 
 mod window;
 pub use window::{Window, WindowManager};
@@ -7,7 +6,7 @@ pub use window::{Window, WindowManager};
 mod screen;
 pub use screen::Screen;
 
-pub mod primitives;
+mod primitives;
 pub use primitives::{Pixel, Size, Color, Location, PixelFormat};
 
 mod buffer;

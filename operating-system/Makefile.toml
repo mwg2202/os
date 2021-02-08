@@ -38,7 +38,7 @@ script = [
 	"cp -r fonts drive/fonts",
 	"cp ${outputFile} drive/EFI/BOOT/BOOTX64.efi",
 ]
-dependencies = ["uefi", "mb2"]
+dependencies = ["uefi"]
 
 [tasks.emulate]
 description = "Creates emulated hardware to run the os on using the UEFI-bootloader."
@@ -54,3 +54,11 @@ args = [
 	"-serial", "stdio", "-monitor", "vc:1024x768"
 ]
 dependencies = ["clean", "drive"]
+
+[tasks.emulate_mb2]
+command = "qemu-system-x86_64"
+args = [
+	"-kernel target/x86_64-os/release/uefi.efi"
+]
+dependencies = ["mb2"]
+
