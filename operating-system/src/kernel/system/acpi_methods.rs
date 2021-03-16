@@ -6,26 +6,33 @@ use super::{Error, SystemHandles};
 use rsdp::Rsdp;
 use alloc::boxed::Box;
 use x86_64::instructions::port::Port;
+use x86_64::structures::port::{PortRead, PortWrite};
 
 use super::fadt::Fadt;
+use crate::info;
 
 static mut AML_CONTEXT: Option<AmlContext> = None;
 static mut TABLES: Option<AcpiTables<Handler>> = None;
 
 pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
+    info("Setting up tables");
     // Initialize the TABLES static variable
     let t = {
+        info("let rsdp");
         let rsdp = h.acpi2.or(h.acpi).ok_or(Error::AcpiHandleNotFound)?;
-        //let handler = AcpiHandlerTraitImpl;
+        info("unsafe");
         unsafe { AcpiTables::from_rsdp(Handler, (rsdp as *const Rsdp) as usize) }
     }?;
+    info("unsafe 2");
     unsafe {TABLES = Some(t)};
+    info("Set up tables");
 
+    info("Setting up aml_context");
     // Initialize the AML_CONTEXT static variable
     unsafe {AML_CONTEXT = Some(
         AmlContext::new(Box::new(Handler), false, DebugVerbosity::All)
     )};
-
+    info("Set up aml_context");
     Ok(())
 }
     
@@ -40,20 +47,20 @@ pub fn find_apic() -> Result<Apic, Error> {
 /// More information in chapter 7 of the acpi specification
 pub fn shutdown() -> Result<(), Error> {
     let context = unsafe{AML_CONTEXT.as_ref()}.ok_or(Error::NoAmlContext)?;
+    info(&context.namespace);
     let tables = unsafe {TABLES.as_ref()}.ok_or(Error::NoAcpiTables)?;
-    let fadt = unsafe {tables.get_sdt::<Fadt>(Signature::FADT)?.unwrap()};
-    let mut port = Port::new(fadt.pm1a_control_block as u16);
-    unsafe { port.write(0b0011010000000000 as u16) };
+    
+
     
     // Returns a PhysicalMapping<H, T>
-    //let fadt = t.get_sdt::<AmlTable>(Signature::FADT)?.unwrap();
+    let fadt = unsafe {tables.get_sdt::<Fadt>(Signature::FADT)?.unwrap()};
     //c.parse_table(fadt.virtual_start.as_ref());
-    //c.invoke_method(AmlName::from_str("\\_TTS"), 5)?;
-    
-    // Notify Device Drivers
-    //c.invoke_method(AmlName::from_str("\\_PTS"), 5)?;
     //let s5 = c.invoke_method(AmlName::from_str("\\_S5"))?;
-    // Writes the sleer
+    
+    let mut port = Port::new(fadt.pm1a_control_block as u16);
+    unsafe { port.write(0b0011110000000000 as u16) };
+    
+    
     Ok(())
 }
 
@@ -61,17 +68,15 @@ pub fn shutdown() -> Result<(), Error> {
 struct Handler;
 impl acpi::AcpiHandler for Handler {
     unsafe fn map_physical_region<T>(
-        &self,
-        physical_start: usize,
-        size: usize,
+        &self, physical_start: usize, size: usize
     ) -> PhysicalMapping<Self, T> {
         use core::ptr::NonNull;
-
+        info("Creating a physical mapping");
         PhysicalMapping {
             physical_start,
             virtual_start: NonNull::new_unchecked(physical_start as *mut T),
-            region_length: core::mem::size_of::<T>(),
-            mapped_length: core::mem::size_of::<T>(),
+            region_length: size,
+            mapped_length: size,
             handler: *self,
         }
     }
@@ -79,68 +84,74 @@ impl acpi::AcpiHandler for Handler {
     fn unmap_physical_region<T>(&self, region: &PhysicalMapping<Self, T>) {}
 }
 impl aml::Handler for Handler {
-    fn read_u8(&self, _address: usize) -> u8 {
-        unimplemented!()
+    fn read_u8(&self, address: usize) -> u8 {
+        unsafe { *(address as *const u8) }
     }
-    fn read_u16(&self, _address: usize) -> u16 {
-        unimplemented!()
+    fn read_u16(&self, address: usize) -> u16 {
+        unsafe { *(address as *const u16) }
     }
-    fn read_u32(&self, _address: usize) -> u32 {
-        unimplemented!()
+    fn read_u32(&self, address: usize) -> u32 {
+        unsafe { *(address as *const u32) }
     }
-    fn read_u64(&self, _address: usize) -> u64 {
-        unimplemented!()
-    }
-
-    fn write_u8(&mut self, _address: usize, _value: u8) {
-        unimplemented!()
-    }
-    fn write_u16(&mut self, _address: usize, _value: u16) {
-        unimplemented!()
-    }
-    fn write_u32(&mut self, _address: usize, _value: u32) {
-        unimplemented!()
-    }
-    fn write_u64(&mut self, _address: usize, _value: u64) {
-        unimplemented!()
+    fn read_u64(&self, address: usize) -> u64 {
+        unsafe { *(address as *const u64) }
     }
 
-    fn read_io_u8(&self, _port: u16) -> u8 {
-        unimplemented!()
+    fn write_u8(&mut self, address: usize, value: u8) {
+        unsafe { *(address as *mut u8) = value} 
     }
-    fn read_io_u16(&self, _port: u16) -> u16 {
-        unimplemented!()
+    fn write_u16(&mut self, address: usize, value: u16) {
+        unsafe { *(address as *mut u16) = value} 
     }
-    fn read_io_u32(&self, _port: u16) -> u32 {
-        unimplemented!()
+    fn write_u32(&mut self, address: usize, value: u32) {
+        unsafe { *(address as *mut u32) = value} 
+    }
+    fn write_u64(&mut self, address: usize, value: u64) {
+        unsafe { *(address as *mut u64) = value} 
     }
 
-    fn write_io_u8(&self, _port: u16, _value: u8) {
-        unimplemented!()
+    fn read_io_u8(&self, port: u16) -> u8 {
+        unsafe { u8::read_from_port(port) }
     }
-    fn write_io_u16(&self, _port: u16, _value: u16) {
-        unimplemented!()
+    fn read_io_u16(&self, port: u16) -> u16 {
+        unsafe { u16::read_from_port(port) }
     }
-    fn write_io_u32(&self, _port: u16, _value: u32) {
-        unimplemented!()
+    fn read_io_u32(&self, port: u16) -> u32 {
+        unsafe { u32::read_from_port(port) }
+    }
+
+    fn write_io_u8(&self, port: u16, value: u8) {
+        unsafe { u8::write_to_port(port, value) }
+    }
+    fn write_io_u16(&self, port: u16, value: u16) {
+        unsafe { u16::write_to_port(port, value) }
+    }
+    fn write_io_u32(&self, port: u16, value: u32) {
+        unsafe { u32::write_to_port(port, value) }
     }
 
     fn read_pci_u8(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16) -> u8 {
+        info("read_pci called");
         unimplemented!()
     }
     fn read_pci_u16(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16) -> u16 {
+        info("read_pci called");
         unimplemented!()
     }
     fn read_pci_u32(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16) -> u32 {
+        info("read_pci called");
         unimplemented!()
     }
     fn write_pci_u8(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16, _value: u8) {
+        info("read_pci called");
         unimplemented!()
     }
     fn write_pci_u16(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16, _value: u16) {
+        info("read_pci called");
         unimplemented!()
     }
     fn write_pci_u32(&self, _segment: u16, _bus: u8, device: u8, _function: u8, _offset: u16, _value: u32) {
+        info("read_pci called");
         unimplemented!()
     }
 }

@@ -1,15 +1,23 @@
 mod allocator;
 mod graphics;
 mod system;
+mod mapper;
 pub use system::{SystemHandles, Error};
 use super::crash;
+use super::info;
+use mapper::Mapper;
+use x86_64::VirtAddr;
+use x86_64::structures::paging::Translate;
 //use aml::{AmlContext, DebugVerbosity};
 //use graphics::{fonts, Color, BufferTrait, Size, 
 //    Location, WindowManager, PixelFormat};
 
 pub fn start(h: SystemHandles) -> ! {
-    system::init_acpi(&h).map_err(crash);
-    let system_font = graphics::fonts::init().or_else(|| crash(Error::CouldNotFindSystemFont));
+    info(&Mapper::translate(VirtAddr::new(0xb8000)));
+    info("Initializing ACPI");
+    system::init_acpi(&h);//.map_err(crash);
+    info("Initialized ACPI");
+    //let system_font = graphics::fonts::init().or_else(|| crash(Error::CouldNotFindSystemFont));
     
     /* 
     let mut gb = graphics::Screen::init(&st.boot_services());
@@ -22,13 +30,16 @@ pub fn start(h: SystemHandles) -> ! {
                      Location {x:100, y:100}, gb.fmt());
     wm.draw(&mut gb);
     */
-
+    
+    info("Calling Shutdown");
     system::shutdown();
+    info("Complete");
     loop {}
 }
 
 use core::panic::PanicInfo;
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(i: &PanicInfo) -> ! {
+    info(&i.message());
     loop {}
 }
