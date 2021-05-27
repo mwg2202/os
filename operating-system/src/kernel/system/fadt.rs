@@ -1,8 +1,7 @@
 use acpi::{
     platform::address::GenericAddress,
     sdt::{ExtendedField, SdtHeader},
-    AcpiError,
-    AcpiTable,
+    AcpiError, AcpiTable,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -29,13 +28,14 @@ pub enum PowerProfile {
     Reserved(u8),
 }
 
-/// Represents the Fixed ACPI Description Table (FADT). This table contains various fixed hardware
-/// details, such as the addresses of the hardware register blocks. It also contains a pointer to
-/// the Differentiated Definition Block (DSDT).
+/// Represents the Fixed ACPI Description Table (FADT). This table contains
+/// various fixed hardware details, such as the addresses of the hardware
+/// register blocks. It also contains a pointer to the Differentiated Definition
+/// Block (DSDT).
 ///
-/// In cases where the FADT contains both a 32-bit and 64-bit field for the same address, we should
-/// always prefer the 64-bit one. Only if it's zero or the CPU will not allow us to access that
-/// address should the 32-bit one be used.
+/// In cases where the FADT contains both a 32-bit and 64-bit field for the same
+/// address, we should always prefer the 64-bit one. Only if it's zero or the
+/// CPU will not allow us to access that address should the 32-bit one be used.
 #[repr(C, packed)]
 pub struct Fadt {
     header: SdtHeader,
@@ -101,7 +101,5 @@ pub struct Fadt {
 }
 
 impl AcpiTable for Fadt {
-    fn header(&self) -> &SdtHeader {
-        &self.header
-    }
+    fn header(&self) -> &SdtHeader { &self.header }
 }

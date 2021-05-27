@@ -1,7 +1,8 @@
-use super::{Pixel, PixelFormat, Size, BufferTrait};
-use uefi::table::boot::BootServices;
 use uefi::proto::console::gop::GraphicsOutput;
+use uefi::table::boot::BootServices;
 use uefi::ResultExt;
+
+use super::{BufferTrait, Pixel, PixelFormat, Size};
 
 #[derive(Debug)]
 pub struct Screen {
@@ -13,8 +14,10 @@ pub struct Screen {
 impl Screen {
     pub fn init(bs: &BootServices) -> Screen {
         // Get the graphics output protocol
-        let graphics_output = bs.locate_protocol::<GraphicsOutput>()
-            .unwrap_success().get();
+        let graphics_output = bs
+            .locate_protocol::<GraphicsOutput>()
+            .unwrap_success()
+            .get();
 
         let graphics_output = unsafe { &mut *(graphics_output) };
 
@@ -26,7 +29,7 @@ impl Screen {
         for mode in modes {
             let mode = mode.log();
             match mode.info().pixel_format() {
-                PixelFormat::RGB | PixelFormat::BGR => {
+                PixelFormat::Rgb | PixelFormat::Bgr => {
                     match best_mode {
                         None => best_mode = Some(mode),
                         Some(ref m) => {
@@ -37,9 +40,9 @@ impl Screen {
                             if (width > bw) || (height > bh) {
                                 best_mode = Some(mode);
                             }
-                        }
+                        },
                     }
-                }
+                },
                 _ => (),
             }
         }
@@ -51,10 +54,7 @@ impl Screen {
         graphics_output.set_mode(&best_mode).unwrap_success();
 
         let (width, height) = best_mode.info().resolution();
-        let size = Size {
-            width,
-            height,
-        };
+        let size = Size { width, height };
 
         // Make a structure out of the information
         Screen {
@@ -65,13 +65,9 @@ impl Screen {
     }
 }
 impl BufferTrait for Screen {
-    fn size(&self) -> Size {
-        self.size
-    }
-    fn ptr(&mut self) -> *mut Pixel {
-        self.ptr
-    }
-    fn fmt(&self) -> PixelFormat {
-        self.fmt
-    }
+    fn size(&self) -> Size { self.size }
+
+    fn ptr(&mut self) -> *mut Pixel { self.ptr }
+
+    fn fmt(&self) -> PixelFormat { self.fmt }
 }

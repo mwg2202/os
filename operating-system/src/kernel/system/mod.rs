@@ -1,6 +1,6 @@
-//pub mod gdt;
-//pub mod apic;
-//pub mod interrupts;
+// pub mod gdt;
+// pub mod apic;
+// pub mod interrupts;
 mod acpi_methods;
 mod fadt;
 pub use acpi_methods::*;
@@ -10,7 +10,6 @@ pub struct SystemHandles {
     pub acpi: Option<&'static Rsdp>,
     pub acpi2: Option<&'static Rsdp>,
 }
-
 
 use acpi::AcpiError;
 use aml::AmlError;
@@ -25,12 +24,8 @@ pub enum Error {
     AmlError(AmlError),
 }
 impl From<AcpiError> for Error {
-    fn from(orig: AcpiError) -> Self {
-        Self::AcpiError(orig)
-    }
+    fn from(orig: AcpiError) -> Self { Self::AcpiError(orig) }
 }
 impl From<AmlError> for Error {
-    fn from(orig: AmlError) -> Self {
-        Self::AmlError(orig)
-    }
+    fn from(orig: AmlError) -> Self { Self::AmlError(orig) }
 }

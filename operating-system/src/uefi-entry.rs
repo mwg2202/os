@@ -5,22 +5,23 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
 extern crate alloc;
 use alloc::vec;
-use uefi::prelude::*;
-use uefi::table::cfg::{ACPI2_GUID, ACPI_GUID};
-use uefi::table::boot::MemoryDescriptor;
+
 use rsdp::Rsdp;
+use uefi::prelude::*;
+use uefi::table::boot::MemoryDescriptor;
+use uefi::table::cfg::{ACPI2_GUID, ACPI_GUID};
 
 mod kernel;
-use kernel::{SystemHandles, Error};
-use core::fmt::{Write, Debug};
+use core::fmt::{Debug, Write};
 use core::mem::size_of;
+
+use kernel::{Error, SystemHandles};
 
 #[entry]
 fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
@@ -28,18 +29,18 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     st.stdout()
         .reset(false)
         .expect_success("Failed to reset output buffer");
-    
-    write!(st.stdout(), "Hello World!\n");
+
+    writeln!(st.stdout(), "Hello World!");
 
     // Gets a list of handles to system tables
     let sys_handles = get_handles(&st);
-    
+
     // Save the system table as a global variable
-    unsafe {ST = Some(st)};
-    unsafe {IMAGE = Some(image)};
-    
+    unsafe { ST = Some(st) };
+    unsafe { IMAGE = Some(image) };
+
     info("Moving to kernel!");
-    
+
     // Start the kernel
     kernel::start(sys_handles);
 }
@@ -68,14 +69,14 @@ fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
     sys_handles
 }
 pub fn crash(err: Error) -> ! {
-    if let Some(st) = unsafe {ST.as_ref()} {
-        write!(st.stdout(), "FATAL ERROR: {:?}\n", err).unwrap();
+    if let Some(st) = unsafe { ST.as_ref() } {
+        writeln!(st.stdout(), "FATAL ERROR: {:?}", err).unwrap();
     }
     loop {}
 }
 pub fn info(string: &(impl Debug + ?Sized)) {
-    if let Some(st) = unsafe {ST.as_ref()} {
-        write!(st.stdout(), "INFO: {:?}\n", string).unwrap();
+    if let Some(st) = unsafe { ST.as_ref() } {
+        writeln!(st.stdout(), "INFO: {:?}", string).unwrap();
     }
 }
 
