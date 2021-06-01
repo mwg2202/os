@@ -16,7 +16,7 @@ impl Mapper {
     pub fn translate(addr: VirtAddr) -> Option<PhysAddr> {
         // read the active level 4 frame from the CR3 register
         let (frame, flags) = Cr3::read();
-        info("Read");
+        info(&frame);
         let table_indexes = [
             addr.p4_index(),
             addr.p3_index(),
@@ -36,7 +36,9 @@ impl Mapper {
             frame = match entry.frame() {
                 Ok(frame) => frame,
                 Err(FrameError::FrameNotPresent) => return None,
-                Err(FrameError::HugeFrame) => panic!("huge pages not supported"),
+                Err(FrameError::HugeFrame) => panic!(
+                    "huge pages not supported"
+                ),
             };
             info("looped");
         }

@@ -18,11 +18,18 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
     info("Setting up tables");
     // Initialize the TABLES static variable
     let t = {
-        info("let rsdp");
-        let rsdp = h.acpi2.or(h.acpi).ok_or(Error::AcpiHandleNotFound)?;
+        // Get the ACPI handle
+        let rsdp = h.acpi2.or(h.acpi)
+            .ok_or(Error::AcpiHandleNotFound)?;
+    
         info("unsafe");
-        unsafe { AcpiTables::from_rsdp(Handler, (rsdp as *const Rsdp) as usize) }
+        unsafe { 
+            AcpiTables::from_rsdp(
+                Handler, (rsdp as *const Rsdp) as usize
+            ) 
+        }
     }?;
+
     info("unsafe 2");
     unsafe { TABLES = Some(t) };
     info("Set up tables");
@@ -51,7 +58,6 @@ pub fn find_apic() -> Result<Apic, Error> {
 /// More information in chapter 7 of the acpi specification
 pub fn shutdown() -> Result<(), Error> {
     let context = unsafe { AML_CONTEXT.as_ref() }.ok_or(Error::NoAmlContext)?;
-    info(&context.namespace);
     let tables = unsafe { TABLES.as_ref() }.ok_or(Error::NoAcpiTables)?;
 
     // Returns a PhysicalMapping<H, T>

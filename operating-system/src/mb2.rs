@@ -1,18 +1,12 @@
-#![no_main]
-#![no_std]
-#![feature(asm)]
-#![feature(alloc_error_handler)]
-
 use multiboot2::{load, BootInformation, RsdpV1Tag, RsdpV2Tag};
 use rsdp::Rsdp;
 
-mod kernel;
-use kernel::{Error, SystemHandles};
+use super::kernel::{Error, SystemHandles};
 
 #[no_mangle]
 fn _start() {
     let mb2_info_ptr: u32;
-    unsafe { asm!("mov {0}, %ebx", out(reg) mb2_info_ptr) };
+    unsafe { asm!("mov {0:e}, ebx", out(reg) mb2_info_ptr) };
     let boot_info = unsafe { load(mb2_info_ptr as usize) };
 
     // Gets a list of handles to system tables
@@ -26,10 +20,10 @@ fn get_handles(bi: &BootInformation) -> SystemHandles {
     SystemHandles {
         acpi: bi
             .rsdp_v1_tag()
-            .map(|r| unsafe { &*(r as *const RsdpV1Tag as *const Rsdp) }),
+            .map(|r| unsafe {&*(r as *const RsdpV1Tag as *const Rsdp)}),
         acpi2: bi
             .rsdp_v2_tag()
-            .map(|r| unsafe { &*(r as *const RsdpV2Tag as *const Rsdp) }),
+            .map(|r| unsafe {&*(r as *const RsdpV2Tag as *const Rsdp)}),
     }
 }
 
