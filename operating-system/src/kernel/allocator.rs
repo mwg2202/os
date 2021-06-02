@@ -7,14 +7,6 @@ use x86_64::structures::paging::{
 };
 use x86_64::VirtAddr;
 
-#[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
-
-#[alloc_error_handler]
-fn alloc_error_handler(layout: Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
-}
-
 pub fn init(
     mapper: &mut impl Mapper<Size4KiB>,
     fa: &mut impl FrameAllocator<Size4KiB>,
@@ -45,9 +37,7 @@ pub fn init(
     }
 
     // Create an instance of the Allocator Struct
-    unsafe {
-        ALLOCATOR.lock().init(start_addr, size);
-    }
+    unsafe { ALLOCATOR.lock().init(start_addr, size); }
 
     Ok(())
 }

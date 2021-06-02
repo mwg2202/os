@@ -5,10 +5,12 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
+#![feature(min_type_alias_impl_trait)]
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_must_use)]
+extern crate alloc;
 
 mod uefi;
 mod mb2;
@@ -16,24 +18,22 @@ mod mb2;
 mod kernel;
 
 use core::fmt::Debug;
-
-#[allow(non_upper_case_globals)]
-const log: fn(text: &str) = _return;
-
-#[allow(non_upper_case_globals)]
-const info: fn(text: &str) = _return;
-
-#[allow(non_upper_case_globals)]
-const error: fn(text: &str) = _return;
-
-#[allow(non_upper_case_globals)]
-const crash: fn(text: &dyn Debug) -> ! = _loop;
-
+use core::alloc::Layout;
+use linked_list_allocator::LockedHeap;
 use core::panic::PanicInfo;
+use log::error;
+
 #[panic_handler]
 fn panic(i: &PanicInfo) -> ! {
-    crash(&i.message());
+    error!("{:?}", i.message());
+    loop{}
 }
 
-fn _return(_: &str) { return; }
-fn _loop(_: &dyn Debug) -> ! { loop {} }
+#[global_allocator]
+static mut ALLOCATOR: LockedHeap = LockedHeap::empty();
+
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}

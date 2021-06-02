@@ -1,4 +1,4 @@
-mod allocator;
+// mod allocator;
 // mod graphics;
 // mod mapper;
 mod system;
@@ -6,8 +6,8 @@ mod system;
 pub use system::{Error, SystemHandles};
 // use x86_64::structures::paging::Translate;
 // use x86_64::VirtAddr;
+use log::info;
 
-use super::info;
 // use aml::{AmlContext, DebugVerbosity};
 // use graphics::{fonts, Color, BufferTrait, Size,
 //    Location, WindowManager, PixelFormat};
@@ -15,7 +15,7 @@ use super::info;
 pub fn start(h: SystemHandles) -> ! {
     // allocator::init(&mut Mapper, &mut Mapper, 0x10000, 1024);
     // system::init_acpi(&h); //.map_err(crash);
-    info("Initialized ACPI");
+    info!("Initialized ACPI");
     // let system_font = graphics::fonts::init().or_else(||
     // crash(Error::CouldNotFindSystemFont));
 

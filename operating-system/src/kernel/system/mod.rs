@@ -1,9 +1,9 @@
 // pub mod gdt;
 // pub mod apic;
 // pub mod interrupts;
-mod acpi_methods;
-mod fadt;
-pub use acpi_methods::*;
+// mod acpi_methods;
+// mod fadt;
+// pub use acpi_methods::*;
 use rsdp::Rsdp;
 
 pub struct SystemHandles {
