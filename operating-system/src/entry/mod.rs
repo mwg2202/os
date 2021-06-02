@@ -1,5 +1,5 @@
-mod logger;
-mod memory_map;
+pub mod logger;
+pub mod memory_map;
 
 use memory_map::*;
 use logger::*;
@@ -41,20 +41,22 @@ fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
         .map(|()| log::set_max_level(LevelFilter::Trace));
    
     info!("Loading OS...");
-
+    
+    // Replace this section of code with the exiting UEFI code
     info!("Getting UEFI Memory Map");
     let mmap = get_memory_map().unwrap();
     read_memory_map(&mmap);
 
     // Getting the UEFI Memory Map
-    info!("Exiting UEFI");
-    let mmap = exit_uefi(image).unwrap();
-    read_memory_map(&mmap);
+    // info!("Exiting UEFI");
+    // let mmap = exit_uefi(image).unwrap();
+    // read_memory_map(&mmap);
 
     // Start the kernel
     info!("Starting the kernel");
-    kernel::start(sys_handles);
+    kernel::start(sys_handles, mmap);
 }
+
 fn get_handles(st: &SystemTable<Boot>) -> SystemHandles {
     // Create a struct to hold the system info
     let mut sys_handles = SystemHandles {

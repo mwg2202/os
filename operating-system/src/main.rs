@@ -12,9 +12,7 @@
 #![allow(unused_must_use)]
 extern crate alloc;
 
-mod uefi;
-mod mb2;
-
+mod entry;
 mod kernel;
 
 use core::fmt::Debug;

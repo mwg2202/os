@@ -7,15 +7,25 @@ pub use system::{Error, SystemHandles};
 // use x86_64::structures::paging::Translate;
 // use x86_64::VirtAddr;
 use log::info;
+use alloc::vec::Vec;
+use uefi::table::boot::{MemoryType, MemoryDescriptor};
+use crate::entry::memory_map::{
+    MemoryMap, 
+    read_memory_map,
+    get_free_memory
+};
 
 // use aml::{AmlContext, DebugVerbosity};
 // use graphics::{fonts, Color, BufferTrait, Size,
 //    Location, WindowManager, PixelFormat};
 
-pub fn start(h: SystemHandles) -> ! {
+pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
+
+    let free_mem = get_free_memory(mmap);
+    // read_memory_map(&free_mem);
+    // for desc in free_mem { info!("{:?}", &desc); }
     // allocator::init(&mut Mapper, &mut Mapper, 0x10000, 1024);
     // system::init_acpi(&h); //.map_err(crash);
-    info!("Initialized ACPI");
     // let system_font = graphics::fonts::init().or_else(||
     // crash(Error::CouldNotFindSystemFont));
 

@@ -78,3 +78,47 @@ pub fn read_memory_map(mmap: &MemoryMap) {
     info!("{}", string);
 }
 
+pub fn get_free_memory(mmap: MemoryMap) -> MemoryMap {
+    // Determines whether or not a descriptor is free
+    let is_free = |desc: MemoryDescriptor| -> bool {
+        desc.ty == MemoryType::CONVENTIONAL
+            || desc.ty == MemoryType::BOOT_SERVICES_DATA
+            || desc.ty == MemoryType::BOOT_SERVICES_CODE
+    };
+
+    // Gets the last element of a vector
+    let last = |vec: &mut Vec<_>| { vec[vec.len() - 1] };
+   
+    // Create a vector to hold the free_memory
+    let mut free_mem = MemoryMap::new();
+
+    // Go through each descriptor in the memory map to find
+    // descriptors which represent regions of free memory
+    for mut desc in mmap {
+        
+        // If the current descriptor represents free memory
+        // add it to the vector or combine it with the previous
+        // descriptor if possible
+        if is_free(desc)
+                && !free_mem.is_empty() 
+                && (
+                    last(&mut free_mem).phys_start
+                    + last(&mut free_mem).page_count * 4 * 1024
+                    == desc.phys_start
+                ) && last(&mut free_mem).att == desc.att {
+
+            // Update the last descriptor
+            last(&mut free_mem).page_count += desc.page_count;
+
+        } else if is_free(desc) {
+
+            // Change the memory type to conventional
+            desc.ty = MemoryType::CONVENTIONAL;
+            
+            // Push the descriptor onto free_mem
+            free_mem.push(desc);
+            
+        }
+    } 
+    return free_mem;
+}
