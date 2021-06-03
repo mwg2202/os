@@ -1,7 +1,13 @@
 extern crate alloc;
 use alloc::boxed::Box;
 
-use acpi::{platform::Apic, sdt::Signature, AcpiTables, AmlTable, PhysicalMapping};
+use acpi::{
+    platform::Apic, 
+    sdt::Signature, 
+    AcpiTables,
+    AmlTable, 
+    PhysicalMapping
+};
 use aml::{AmlContext, DebugVerbosity};
 use rsdp::Rsdp;
 use x86_64::instructions::port::Port;
@@ -9,41 +15,59 @@ use x86_64::structures::port::{PortRead, PortWrite};
 
 use super::fadt::Fadt;
 use super::{Error, SystemHandles};
-use crate::info;
+use log::{info, debug, trace};
 
 static mut AML_CONTEXT: Option<AmlContext> = None;
 static mut TABLES: Option<AcpiTables<Handler>> = None;
 
 pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
-    info("Setting up tables");
-    // Initialize the TABLES static variable
-    let t = {
-        // Get the ACPI handle
-        let rsdp = h.acpi2.or(h.acpi)
-            .ok_or(Error::AcpiHandleNotFound)?;
     
-        info("unsafe");
-        unsafe { 
-            AcpiTables::from_rsdp(
-                Handler, (rsdp as *const Rsdp) as usize
-            ) 
-        }
+    debug!("Setting up ACPI tables");
+    // Get the rsdp from the system handles
+    let rsdp = h.acpi2.or(h.acpi)
+        .ok_or(Error::RsdpNotFound)?;
+        
+    // Get the ACPI tables from the rsdp pointer
+    let tables = unsafe { 
+        AcpiTables::from_rsdp(
+            Handler, (rsdp as *const Rsdp) as usize
+        ) 
     }?;
 
-    info("unsafe 2");
-    unsafe { TABLES = Some(t) };
-    info("Set up tables");
+    debug!("Creating a new AML context");
+    let mut aml_ctx = AmlContext::new(
+        Box::new(Handler),
+        DebugVerbosity::None,
+    );
 
-    info("Setting up aml_context");
-    // Initialize the AML_CONTEXT static variable
-    unsafe {
-        AML_CONTEXT = Some(AmlContext::new(
-            Box::new(Handler),
-            false,
-            DebugVerbosity::All,
-        ))
-    };
-    info("Set up aml_context");
+    debug!("Running DSDT through AML context");
+    if let Some(dsdt) = tables.dsdt {
+        let dsdt = unsafe {
+            alloc::slice::from_raw_parts(
+                dsdt.address as *const u8,
+                dsdt.length as usize,
+            )
+        };
+        aml_ctx.parse_table(dsdt)?;
+    } else { debug!("DSDT not found"); }
+
+    debug!("Running SSDTs through AML context");
+    for ssdt in tables.ssdts {
+        let ssdt = unsafe {
+            alloc::slice::from_raw_parts(
+                ssdt.address as *const u8,
+                ssdt.length as usize,
+            )
+        };
+        aml_ctx.parse_table(ssdt)?;
+    }
+
+
+    
+    // Save the AML context object and the ACPI tables object
+    unsafe { AML_CONTEXT = Some(aml_ctx) };
+    // unsafe { TABLES = Some(tables) };
+
     Ok(())
 }
 
@@ -80,7 +104,7 @@ impl acpi::AcpiHandler for Handler {
         size: usize,
     ) -> PhysicalMapping<Self, T> {
         use core::ptr::NonNull;
-        info("Creating a physical mapping");
+        debug!("Creating a physical mapping");
         PhysicalMapping {
             physical_start,
             virtual_start: NonNull::new_unchecked(physical_start as *mut T),
@@ -143,7 +167,7 @@ impl aml::Handler for Handler {
         _function: u8,
         _offset: u16,
     ) -> u8 {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 
@@ -155,7 +179,7 @@ impl aml::Handler for Handler {
         _function: u8,
         _offset: u16,
     ) -> u16 {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 
@@ -167,7 +191,7 @@ impl aml::Handler for Handler {
         _function: u8,
         _offset: u16,
     ) -> u32 {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 
@@ -180,7 +204,7 @@ impl aml::Handler for Handler {
         _offset: u16,
         _value: u8,
     ) {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 
@@ -193,7 +217,7 @@ impl aml::Handler for Handler {
         _offset: u16,
         _value: u16,
     ) {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 
@@ -206,7 +230,7 @@ impl aml::Handler for Handler {
         _offset: u16,
         _value: u32,
     ) {
-        info("read_pci called");
+        debug!("read_pci called");
         unimplemented!()
     }
 }
