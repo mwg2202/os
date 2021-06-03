@@ -14,7 +14,7 @@ impl log::Log for UefiLogger {
         if let Some(st) = unsafe { ST.as_ref() } {
             writeln!(
                 st.stdout(),
-                "{}: {}",
+                "[{}] {}",
                 record.level(),
                 record.args()
             );
