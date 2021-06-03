@@ -18,7 +18,8 @@ pub enum Error {
     // CouldNotFindApic,
     // CouldNotFindSystemFont,
     // NoAcpiTables,
-    // NoAmlContext,
+    NoMcfg,
+    NoAmlContext,
     AcpiError(AcpiError),
     AmlError(AmlError),
 }

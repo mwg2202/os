@@ -2,15 +2,20 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use acpi::{ AcpiTables, PhysicalMapping };
-use aml::{AmlContext, DebugVerbosity};
+use acpi::mcfg::{PciConfigRegions};
+use aml::{AmlContext, DebugVerbosity, AmlName};
 use rsdp::Rsdp;
 // use x86_64::instructions::port::Port;
 use x86_64::structures::port::{PortRead, PortWrite};
 
 use super::{Error, SystemHandles};
 use log::debug;
+use alloc::string::ToString;
+use alloc::borrow::ToOwned;
 
 static mut AML_CONTEXT: Option<AmlContext> = None;
+static mut PCI_REGIONS: Option<PciConfigRegions> = None;
+
 
 /// Parses the acpi tables and creates an aml context object to be
 /// used when clalling acpi methods
@@ -27,6 +32,11 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
             Handler, (rsdp as *const Rsdp) as usize
         ) 
     }?;
+    
+    debug!("Locating the PCIe configuration space");
+    let regions = PciConfigRegions::new(&tables)?;
+    unsafe { PCI_REGIONS = Some(regions)};
+
 
     debug!("Creating a new AML context");
     let mut aml_ctx = AmlContext::new(
@@ -56,25 +66,39 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
         aml_ctx.parse_table(ssdt)?;
     }
 
-
+    aml_ctx.initialize_objects()?;
     
     // Save the AML context object and the ACPI tables object
     unsafe { AML_CONTEXT = Some(aml_ctx) };
-    // unsafe { TABLES = Some(tables) };
 
     Ok(())
 }
 
-// pub fn find_apic(tables: &AcpiTables<Handler>) 
-//     -> Result<Apic, Error> {
-//     match tables.platform_info()?.interrupt_model {
-//         acpi::InterruptModel::Apic(apic) => Ok(apic),
-//         _ => Err(Error::CouldNotFindApic),
-//     }
-// }
-
 /// More information in chapter 7 of the acpi specification
-pub fn shutdown() -> Result<(), Error> {
+pub fn shutdown(mode: usize) -> Result<(), Error> {
+    // Get the current Aml context
+    let aml_ctx = unsafe { AML_CONTEXT.as_ref() }
+        .ok_or(Error::NoAmlContext)?;
+   
+    let mode = "\\_S".to_owned() + mode.to_string().as_str();
+    let mode = aml_ctx
+        .namespace
+        .get_by_path(&AmlName::from_str(&mode)?)?;
+    debug!("{:?}", &mode);
+
+
+    // Returns a PhysicalMapping<H, T>
+    // let fadt = unsafe { tables.get_sdt::<Fadt>(Signature::FADT) }?
+    //     .unwrap();
+    
+
+    // let mut port = Port::new(fadt.pm1a_control_block as u16);
+    // unsafe { port.write(0b0011110000000000 as u16) };
+
+    Ok(())
+}
+
+pub fn wakeup() -> Result<(), Error> {
     // let context = unsafe { AML_CONTEXT.as_ref() }
     //     .ok_or(Error::NoAmlContext)?;
 
@@ -171,76 +195,148 @@ impl aml::Handler for Handler {
 
     fn read_pci_u8(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
     ) -> u8 {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        self.read_u8(addr + offset)
+
     }
 
     fn read_pci_u16(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
     ) -> u16 {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        self.read_u16(addr + offset)
+
     }
 
     fn read_pci_u32(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
     ) -> u32 {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        self.read_u32(addr + offset)
+
     }
 
     fn write_pci_u8(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
-        _value: u8,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
+        value: u8,
     ) {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        unsafe { *((addr + offset) as *mut u8) = value }
+
     }
 
     fn write_pci_u16(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
-        _value: u16,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
+        value: u16,
     ) {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        unsafe { *((addr + offset) as *mut u16) = value }
+
     }
 
     fn write_pci_u32(
         &self,
-        _segment: u16,
-        _bus: u8,
-        _device: u8,
-        _function: u8,
-        _offset: u16,
-        _value: u32,
+        segment: u16,
+        bus: u8,
+        device: u8,
+        function: u8,
+        offset: u16,
+        value: u32,
     ) {
-        debug!("read_pci called");
-        unimplemented!()
+
+        // Get the PCIe regions
+        let pci_regions = unsafe { PCI_REGIONS.as_ref() }
+            .expect("Could not find PCI Configuration Space");
+        
+        // Get the addressof the 
+        let addr = pci_regions
+            .physical_address(segment, bus, device, function)
+            .expect("Cannot manage device") as usize;
+        
+        // Read the address
+        let offset = offset as usize;
+        unsafe { *((addr + offset) as *mut u32) = value }
+
     }
 }

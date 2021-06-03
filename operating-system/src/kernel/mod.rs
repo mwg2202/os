@@ -2,7 +2,7 @@
 // mod mapper;
 mod system;
 pub use system::{Error, SystemHandles};
-use log::debug;
+use log::{debug, trace};
 use crate::entry::memory_map::{ MemoryMap, get_free_memory };
 
 // use graphics::{fonts, Color, BufferTrait, Size,
@@ -26,12 +26,18 @@ pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
     // wm.create_window(0, Size {width:100, height:100},
     // Location {x:100, y:100}, gb.fmt());
     // wm.draw(&mut gb);
-
+    
     debug!("Initializing ACPI methods");
     system::init_acpi(&h).expect("Could not initialize ACPI methods");
 
     debug!("Shutting down the system");
-    system::shutdown().expect("Could not shutdown system");
+    match system::shutdown(5) {
+        Ok(_) => debug!("Successfully shut down system"),
+        Err(err) => {
+            trace!("{:?}", err);
+            panic!("Could not shutdown system");
+        },
+    }
 
     loop {}
 }
