@@ -11,7 +11,7 @@ use alloc::vec::Vec;
 use uefi::table::boot::{MemoryType, MemoryDescriptor};
 use crate::entry::memory_map::{
     MemoryMap, 
-    read_memory_map,
+    count_descriptors,
     get_free_memory
 };
 

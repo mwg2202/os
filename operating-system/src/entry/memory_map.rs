@@ -4,30 +4,27 @@ use core::mem::size_of;
 use alloc::vec::Vec;
 use alloc::borrow::ToOwned;
 use alloc::{vec, format};
+use alloc::string::String;
 use uefi::table::boot::{MemoryType, MemoryDescriptor};
 use uefi::ResultExt;
 
 pub type MemoryMap = Vec<MemoryDescriptor>;
 
 /// Gets a memory map
-pub fn get_memory_map() -> Result<MemoryMap, ()> {
+pub fn get_memory_map() -> Result<(MemoryMap, usize), ()> {
     if let Some(st) = unsafe { ST.as_ref() } {
-        let max_mmap_size =
-            st.boot_services().memory_map_size() 
-            + 8 * size_of::<MemoryDescriptor>();
-
-        info!("{:?}", &max_mmap_size); // REMOVE LATER
-        info!("{:?}", &size_of::<MemoryDescriptor>());
+        let map_size = st.boot_services().memory_map_size();
+        let buf_size = map_size + 8 * size_of::<MemoryDescriptor>();
 
         let mut mmap_storage 
-            = vec![0; max_mmap_size].into_boxed_slice();
+            = vec![0; buf_size].into_boxed_slice();
 
         let (_key, iter) = st
             .boot_services()
             .memory_map(&mut mmap_storage[..])
             .expect_success("Failed to get memory map");
             
-        Ok(iter.copied().collect())
+        Ok((iter.copied().collect(), map_size))
     } else { return Err(()) }
 }
 
@@ -55,8 +52,8 @@ pub fn exit_uefi(image: uefi::Handle) -> Result<MemoryMap, ()> {
     } else { Err(()) }
 }
 
-pub fn read_memory_map(mmap: &MemoryMap) {
-    let mut string = "MEMORY MAP DATA:".to_owned();
+pub fn count_descriptors(mmap: &MemoryMap) -> String {
+    let mut string = "Descriptor Types:".to_owned();
     // List of all the memory types
     let mts = [
         MemoryType::RESERVED, MemoryType::LOADER_CODE, 
@@ -75,7 +72,7 @@ pub fn read_memory_map(mmap: &MemoryMap) {
         string += &format!("\n    {} {:?}", count, mt);
     }
 
-    info!("{}", string);
+    return string;
 }
 
 pub fn get_free_memory(mmap: MemoryMap) -> MemoryMap {
