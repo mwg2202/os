@@ -1,28 +1,16 @@
 // mod graphics;
 // mod mapper;
 mod system;
-// use mapper::Mapper;
 pub use system::{Error, SystemHandles};
-// use x86_64::structures::paging::Translate;
-// use x86_64::VirtAddr;
-use log::{info, debug};
-use alloc::vec::Vec;
-use uefi::table::boot::{MemoryType, MemoryDescriptor};
-use crate::entry::memory_map::{
-    MemoryMap, 
-    count_descriptors,
-    get_free_memory
-};
-use system::shutdown;
+use log::debug;
+use crate::entry::memory_map::{ MemoryMap, get_free_memory };
 
-// use aml::{AmlContext, DebugVerbosity};
 // use graphics::{fonts, Color, BufferTrait, Size,
 //    Location, WindowManager, PixelFormat};
 
 pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
 
-    let free_mem = get_free_memory(mmap);
-    // read_memory_map(&free_mem);
+    let _free_mem = get_free_memory(mmap);
     // for desc in free_mem { info!("{:?}", &desc); }
     
     // Get the system font
@@ -32,7 +20,7 @@ pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
     // let mut gb = graphics::Screen::init(&st.boot_services());
     // let mut wm = WindowManager::new();
     // gb.fill(Color::new(0, 255, 0));
-    // gb.write_text("System Successfully Loaded!", Location {x:50, y:50},
+    // gb.write_text("System Working!", Location {x:50, y:50},
     // &system_font, 50.0, Color::new(255, 255, 255));
     
     // wm.create_window(0, Size {width:100, height:100},
@@ -40,10 +28,10 @@ pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
     // wm.draw(&mut gb);
 
     debug!("Initializing ACPI methods");
-    system::init_acpi(&h);
+    system::init_acpi(&h).expect("Could not initialize ACPI methods");
 
     debug!("Shutting down the system");
-    system::shutdown();
+    system::shutdown().expect("Could not shutdown system");
 
     loop {}
 }

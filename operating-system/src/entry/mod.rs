@@ -11,20 +11,16 @@ use core::fmt::Debug;
 use core::fmt::Write;
 use rsdp::Rsdp;
 use super::kernel;
-use super::kernel::{SystemHandles, Error};
+use super::kernel::SystemHandles;
 use super::ALLOCATOR;
-use alloc::vec;
-use alloc::vec::Vec;
-use alloc::format;
-use alloc::string::ToString;
-use log::{Record, Level, Metadata, LevelFilter, info, debug, trace};
+use log::{ LevelFilter, info, debug, trace};
 use core::mem::size_of;
 
 #[entry]
-fn efi_main(image: uefi::Handle, st: SystemTable<Boot>) -> Status {
+fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
 
     // Set up the allocator
-    unsafe { ALLOCATOR.lock().init(100000, 100000); }
+    unsafe { ALLOCATOR.lock().init(100000, 100_000_000); }
 
     // Initialize UEFI text services and logging
     init_logging(st);
@@ -62,7 +58,8 @@ fn init_logging(st: SystemTable<Boot>) {
 
     // Set the default logger
     log::set_logger(&UEFI_LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Trace));
+        .map(|()| log::set_max_level(LevelFilter::Trace))
+        .expect("Failed to setup logging using UEFI");
 
 }
 

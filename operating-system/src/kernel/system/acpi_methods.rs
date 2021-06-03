@@ -1,25 +1,19 @@
 extern crate alloc;
 use alloc::boxed::Box;
 
-use acpi::{
-    platform::Apic, 
-    sdt::Signature, 
-    AcpiTables,
-    AmlTable, 
-    PhysicalMapping
-};
+use acpi::{ AcpiTables, PhysicalMapping };
 use aml::{AmlContext, DebugVerbosity};
 use rsdp::Rsdp;
-use x86_64::instructions::port::Port;
+// use x86_64::instructions::port::Port;
 use x86_64::structures::port::{PortRead, PortWrite};
 
-use super::fadt::Fadt;
 use super::{Error, SystemHandles};
-use log::{info, debug, trace};
+use log::debug;
 
 static mut AML_CONTEXT: Option<AmlContext> = None;
-static mut TABLES: Option<AcpiTables<Handler>> = None;
 
+/// Parses the acpi tables and creates an aml context object to be
+/// used when clalling acpi methods
 pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
     
     debug!("Setting up ACPI tables");
@@ -71,32 +65,34 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn find_apic() -> Result<Apic, Error> {
-    let t = unsafe { TABLES.as_ref() }.ok_or(Error::NoAcpiTables)?;
-    match t.platform_info()?.interrupt_model {
-        acpi::InterruptModel::Apic(apic) => Ok(apic),
-        _ => Err(Error::CouldNotFindApic),
-    }
-}
+// pub fn find_apic(tables: &AcpiTables<Handler>) 
+//     -> Result<Apic, Error> {
+//     match tables.platform_info()?.interrupt_model {
+//         acpi::InterruptModel::Apic(apic) => Ok(apic),
+//         _ => Err(Error::CouldNotFindApic),
+//     }
+// }
 
 /// More information in chapter 7 of the acpi specification
 pub fn shutdown() -> Result<(), Error> {
-    let context = unsafe { AML_CONTEXT.as_ref() }.ok_or(Error::NoAmlContext)?;
-    let tables = unsafe { TABLES.as_ref() }.ok_or(Error::NoAcpiTables)?;
+    // let context = unsafe { AML_CONTEXT.as_ref() }
+    //     .ok_or(Error::NoAmlContext)?;
 
     // Returns a PhysicalMapping<H, T>
-    let fadt = unsafe { tables.get_sdt::<Fadt>(Signature::FADT)?.unwrap() };
+    // let fadt = unsafe { tables.get_sdt::<Fadt>(Signature::FADT) }?
+    //     .unwrap();
+
     // c.parse_table(fadt.virtual_start.as_ref());
     // let s5 = c.invoke_method(AmlName::from_str("\\_S5"))?;
 
-    let mut port = Port::new(fadt.pm1a_control_block as u16);
-    unsafe { port.write(0b0011110000000000 as u16) };
+    // let mut port = Port::new(fadt.pm1a_control_block as u16);
+    // unsafe { port.write(0b0011110000000000 as u16) };
 
     Ok(())
 }
 
 #[derive(Clone, Copy)]
-struct Handler;
+pub struct Handler;
 impl acpi::AcpiHandler for Handler {
     unsafe fn map_physical_region<T>(
         &self,
@@ -114,16 +110,24 @@ impl acpi::AcpiHandler for Handler {
         }
     }
 
-    fn unmap_physical_region<T>(&self, region: &PhysicalMapping<Self, T>) {}
+    fn unmap_physical_region<T>(&self, _region: &PhysicalMapping<Self, T>) {}
 }
 impl aml::Handler for Handler {
-    fn read_u8(&self, address: usize) -> u8 { unsafe { *(address as *const u8) } }
+    fn read_u8(&self, address: usize) -> u8 {
+        unsafe { *(address as *const u8) }
+    }
 
-    fn read_u16(&self, address: usize) -> u16 { unsafe { *(address as *const u16) } }
+    fn read_u16(&self, address: usize) -> u16 {
+        unsafe { *(address as *const u16) }
+    }
 
-    fn read_u32(&self, address: usize) -> u32 { unsafe { *(address as *const u32) } }
+    fn read_u32(&self, address: usize) -> u32 {
+        unsafe { *(address as *const u32) }
+    }
 
-    fn read_u64(&self, address: usize) -> u64 { unsafe { *(address as *const u64) } }
+    fn read_u64(&self, address: usize) -> u64 {
+        unsafe { *(address as *const u64) }
+    }
 
     fn write_u8(&mut self, address: usize, value: u8) {
         unsafe { *(address as *mut u8) = value }
@@ -141,11 +145,17 @@ impl aml::Handler for Handler {
         unsafe { *(address as *mut u64) = value }
     }
 
-    fn read_io_u8(&self, port: u16) -> u8 { unsafe { u8::read_from_port(port) } }
+    fn read_io_u8(&self, port: u16) -> u8 {
+        unsafe { u8::read_from_port(port) }
+    }
 
-    fn read_io_u16(&self, port: u16) -> u16 { unsafe { u16::read_from_port(port) } }
+    fn read_io_u16(&self, port: u16) -> u16 {
+        unsafe { u16::read_from_port(port) }
+    }
 
-    fn read_io_u32(&self, port: u16) -> u32 { unsafe { u32::read_from_port(port) } }
+    fn read_io_u32(&self, port: u16) -> u32 { 
+        unsafe { u32::read_from_port(port) }
+    }
 
     fn write_io_u8(&self, port: u16, value: u8) {
         unsafe { u8::write_to_port(port, value) }
@@ -163,7 +173,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
     ) -> u8 {
@@ -175,7 +185,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
     ) -> u16 {
@@ -187,7 +197,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
     ) -> u32 {
@@ -199,7 +209,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
         _value: u8,
@@ -212,7 +222,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
         _value: u16,
@@ -225,7 +235,7 @@ impl aml::Handler for Handler {
         &self,
         _segment: u16,
         _bus: u8,
-        device: u8,
+        _device: u8,
         _function: u8,
         _offset: u16,
         _value: u32,

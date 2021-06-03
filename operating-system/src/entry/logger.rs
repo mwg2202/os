@@ -1,4 +1,4 @@
-use log::{Record, Level, Metadata, LevelFilter, info};
+use log::{Record, Level, Metadata};
 use core::fmt::Write;
 use super::ST;
 
@@ -17,7 +17,7 @@ impl log::Log for UefiLogger {
                 "[{}] {}",
                 record.level(),
                 record.args()
-            );
+            ).unwrap();
         }
 
         if record.level() == Level::Error {

@@ -2,7 +2,6 @@
 // pub mod apic;
 // pub mod interrupts;
 mod acpi_methods;
-mod fadt;
 pub use acpi_methods::*;
 use rsdp::Rsdp;
 
@@ -16,10 +15,10 @@ use aml::AmlError;
 #[derive(Debug)]
 pub enum Error {
     RsdpNotFound,
-    CouldNotFindApic,
-    CouldNotFindSystemFont,
-    NoAcpiTables,
-    NoAmlContext,
+    // CouldNotFindApic,
+    // CouldNotFindSystemFont,
+    // NoAcpiTables,
+    // NoAmlContext,
     AcpiError(AcpiError),
     AmlError(AmlError),
 }

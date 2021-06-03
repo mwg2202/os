@@ -5,17 +5,12 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
-#![feature(min_type_alias_impl_trait)]
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_must_use)]
+// #![allow(dead_code)]
 extern crate alloc;
 
 mod entry;
 mod kernel;
 
-use core::fmt::Debug;
 use core::alloc::Layout;
 use linked_list_allocator::LockedHeap;
 use core::panic::PanicInfo;
