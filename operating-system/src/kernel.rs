@@ -1,17 +1,24 @@
-// mod graphics;
-// mod mapper;
-mod system;
-pub use system::{Error, SystemHandles};
+use crate::system::SystemHandles;
+use crate::system;
 use log::{debug, trace};
-use crate::entry::memory_map::{ MemoryMap, get_free_memory };
+use crate::memory::memory_map::MemoryMap;
+use crate::memory::frame_allocator::FrameAllocator;
+use crate::memory::allocator::ALLOCATOR;
+use uefi::table::boot::MemoryType;
 
 // use graphics::{fonts, Color, BufferTrait, Size,
 //    Location, WindowManager, PixelFormat};
 
-pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
+pub fn start(h: SystemHandles, map: MemoryMap) -> ! {
 
-    let _free_mem = get_free_memory(mmap);
-    // for desc in free_mem { info!("{:?}", &desc); }
+    debug!("Setting up frame allocator and reclaiming UEFI memory");
+    let mut fa = FrameAllocator::new();
+    fa.reclaim(map, MemoryType::CONVENTIONAL);
+    // fa.reclaim(map, MemoryType::BOOT_SERVICES_CODE)
+    // fa.reclaim(map, MemoryType::BOOT_SERVICES_DATA)
+
+    // debug!("Setting up allocator")
+    // unsafe { ALLOCATOR.init(); }
     
     // Get the system font
     // let system_font = graphics::fonts::init().or_else(||
@@ -31,7 +38,7 @@ pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
     system::init_acpi(&h).expect("Could not initialize ACPI methods");
 
     debug!("Shutting down the system");
-    match system::shutdown(5) {
+    match system::shutdown(3) {
         Ok(_) => debug!("Successfully shut down system"),
         Err(err) => {
             trace!("{:?}", err);
@@ -39,5 +46,14 @@ pub fn start(h: SystemHandles, mmap: MemoryMap) -> ! {
         },
     }
 
+    match system::wakeup(3) {
+        Ok(_) => debug!("Successfully shut down system"),
+        Err(err) => {
+            trace!("{:?}", err);
+            panic!("Could not wakeup system");
+        },
+    }
+
     loop {}
 }
+

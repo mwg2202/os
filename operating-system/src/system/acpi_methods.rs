@@ -1,17 +1,16 @@
 extern crate alloc;
 use alloc::boxed::Box;
 
-use acpi::{ AcpiTables, PhysicalMapping };
+use acpi::{AcpiTables, PhysicalMapping};
 use acpi::mcfg::{PciConfigRegions};
 use aml::{AmlContext, DebugVerbosity, AmlName};
+use aml::value::{Args, AmlValue};
 use rsdp::Rsdp;
 // use x86_64::instructions::port::Port;
 use x86_64::structures::port::{PortRead, PortWrite};
 
 use super::{Error, SystemHandles};
 use log::debug;
-use alloc::string::ToString;
-use alloc::borrow::ToOwned;
 
 static mut AML_CONTEXT: Option<AmlContext> = None;
 static mut PCI_REGIONS: Option<PciConfigRegions> = None;
@@ -66,6 +65,7 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
         aml_ctx.parse_table(ssdt)?;
     }
 
+    debug!("Initializing AML objects");
     aml_ctx.initialize_objects()?;
     
     // Save the AML context object and the ACPI tables object
@@ -77,14 +77,54 @@ pub fn init_acpi(h: &SystemHandles) -> Result<(), Error> {
 /// More information in chapter 7 of the acpi specification
 pub fn shutdown(mode: usize) -> Result<(), Error> {
     // Get the current Aml context
-    let aml_ctx = unsafe { AML_CONTEXT.as_ref() }
+    let aml_ctx = unsafe { AML_CONTEXT.as_mut() }
         .ok_or(Error::NoAmlContext)?;
    
-    let mode = "\\_S".to_owned() + mode.to_string().as_str();
-    let mode = aml_ctx
-        .namespace
-        .get_by_path(&AmlName::from_str(&mode)?)?;
-    debug!("{:?}", &mode);
+    // let s_mode = "\\_S".to_owned() + mode.to_string().as_str();
+    // let s_mode = &aml_ctx
+    //     .namespace
+        // .get_by_path(&AmlName::from_str(&s_mode)?)?;
+    // debug!("S5: {:?}", &s_mode);
+   
+    for mode in ["\\_S0", "\\_S1", "\\_S2", "\\_S3", "\\_S4", "\\_S5"] {
+        let name =  AmlName::from_str(&mode).unwrap();
+        debug!("{}: {:?}", mode, &aml_ctx.namespace.get_by_path(&name));
+    }
+
+    // System status indicator, messages waiter indicator,
+    // battery level threshold, 
+    // let cmds = ["\\SI_SST", "\\SI_MSG", "\\SI_BLT"]; {
+    // }
+    
+    // Call TTS: a control method used to prepare to sleep
+    // and run once awakened
+    aml_ctx.invoke_method(
+        &AmlName::from_str("\\_TTS")?,
+        Args {
+            arg_0: Some(AmlValue::Integer(mode as u64)),
+            arg_1: None,
+            arg_2: None,
+            arg_3: None,
+            arg_4: None,
+            arg_5: None,
+            arg_6: None,
+        },
+    )?;
+    
+    // Call PTS: control method used to notify the platform
+    // of impending sleep transition
+    aml_ctx.invoke_method(
+        &AmlName::from_str("\\_TTS")?,
+        Args {
+            arg_0: Some(AmlValue::Integer(mode as u64)),
+            arg_1: None,
+            arg_2: None,
+            arg_3: None,
+            arg_4: None,
+            arg_5: None,
+            arg_6: None,
+        },
+    )?;
 
 
     // Returns a PhysicalMapping<H, T>
@@ -98,7 +138,7 @@ pub fn shutdown(mode: usize) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn wakeup() -> Result<(), Error> {
+pub fn wakeup(_mod: usize) -> Result<(), Error> {
     // let context = unsafe { AML_CONTEXT.as_ref() }
     //     .ok_or(Error::NoAmlContext)?;
 
