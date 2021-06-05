@@ -2,18 +2,12 @@ use crate::system::SystemHandles;
 use crate::system;
 use log::{debug, trace};
 use crate::memory::memory_map::MemoryMap;
-use crate::memory::frame_allocator::FrameAllocator;
-use crate::memory::allocator::ALLOCATOR;
-use uefi::table::boot::MemoryType;
 
 // use graphics::{fonts, Color, BufferTrait, Size,
 //    Location, WindowManager, PixelFormat};
 
-pub fn start(h: SystemHandles, map: MemoryMap) -> ! {
-
-    debug!("Setting up frame allocator and reclaiming UEFI memory");
-    let mut fa = FrameAllocator::new();
-    fa.reclaim(map, MemoryType::CONVENTIONAL);
+pub fn start(h: SystemHandles) -> ! {
+    
     // fa.reclaim(map, MemoryType::BOOT_SERVICES_CODE)
     // fa.reclaim(map, MemoryType::BOOT_SERVICES_DATA)
 
