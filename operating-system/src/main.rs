@@ -3,6 +3,7 @@
 #![no_std]
 #![feature(asm)]
 #![feature(abi_x86_interrupt)]
+#![feature(allocator_api)]
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(min_type_alias_impl_trait)]

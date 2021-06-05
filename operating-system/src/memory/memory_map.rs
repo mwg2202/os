@@ -11,7 +11,7 @@ pub type MemoryMap = impl ExactSizeIterator
 pub fn get() -> Option<MemoryMap> {
 
     // Get the system table
-    let st = unsafe { ST.as_ref() }.unwrap_or(return None);
+    let st = unsafe { ST.as_ref() }?;
 
     // Get the size of the memory map
     let map_size = st.boot_services().memory_map_size();

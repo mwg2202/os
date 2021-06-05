@@ -1,6 +1,6 @@
 use core::alloc::{Layout, GlobalAlloc};
 use core::ptr::null_mut;
-use super::frame_allocator::FRAME_ALLOCATOR;
+use super::frame_allocator::{Frame, FRAME_ALLOCATOR};
 use x86_64::structures::paging::FrameAllocator;
 use alloc::vec::Vec;
 use x86_64::addr::PhysAddr;
@@ -21,6 +21,11 @@ pub struct Allocation {
 
 pub struct Allocator;
 impl Allocator {
+
+    // Initializes the allocator with a frame
+    pub fn init(frame: &Frame) {
+        unimplemented!();
+    }
 
     /// Tries to allocate a region of memory using known
     /// free regions. Return a null pointer if there
@@ -130,3 +135,13 @@ impl Allocator {
         FREE_REGIONS.push(new_free);
     }
 }
+// impl Allocator {
+//     pub fn allocate(
+//         &self,
+//         layout: Layout,
+//     ) -> Result<NonNull<[u8]>, AllocError> { self.alloc(layout); }
+    
+//     pub fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+//         self.dealloc(ptr, layout);
+//     }
+// }

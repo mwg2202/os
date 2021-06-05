@@ -1,5 +1,6 @@
 use crate::memory::memory_map::MemoryMap;
 use crate::memory::memory_map;
+use crate::memory::allocator::Allocator;
 use x86_64::structures::paging::FrameAllocator as FrameAllocatorTrait;
 use x86_64::structures::paging::frame::PhysFrame;
 use x86_64::structures::paging::page::Size4KiB;
@@ -34,7 +35,12 @@ impl FrameAllocator {
             let addr = PhysAddr::new(
                 desc.phys_start + i*4096);
             let frame = PhysFrame::containing_address(addr);
-            self.0.push( (frame, true) );
+
+            if self.0.is_empty() {
+                Allocator::init(&frame);
+            } else {
+                self.0.push( (frame, true) );
+            }
         }
     }
    
