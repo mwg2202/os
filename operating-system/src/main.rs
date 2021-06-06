@@ -7,6 +7,7 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 #![feature(min_type_alias_impl_trait)]
+#![feature(slice_ptr_get)]
 #![allow(unreachable_code)]
 extern crate alloc;
 
@@ -24,8 +25,6 @@ use log::{info, debug, error};
 use uefi::prelude::*;
 use logging::UefiLogger;
 use system::SystemHandles;
-use memory::frame_allocator::FRAME_ALLOCATOR;
-use memory::allocator::Allocator;
 
 pub static mut ST: Option<SystemTable<Boot>> = None;
 
@@ -51,9 +50,6 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     UefiLogger::init();
     
     info!("Loading OS...");
-    
-    info!("Initializing the Global Frame Allocator");
-    unsafe { FRAME_ALLOCATOR.init(); }
 
     // info!("Initializing the Global Allocator");
     // Allocator::init();
