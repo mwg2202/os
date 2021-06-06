@@ -2,16 +2,20 @@ use core::alloc::{Layout, GlobalAlloc};
 use core::ptr::null_mut;
 use super::frame_allocator::{Frame, FRAME_ALLOCATOR};
 use x86_64::structures::paging::FrameAllocator;
+use crate::memory::uefi_allocator::UefiAllocator;
 use alloc::vec::Vec;
 use x86_64::addr::PhysAddr;
+use log::trace;
 
 #[global_allocator]
 pub static mut ALLOCATOR: Allocator = Allocator;
 
-static mut ALLOCATIONS: Allocations = Allocations::new();
-static mut FREE_REGIONS: Allocations = Allocations::new();
+static mut ALLOCATIONS: Allocations = 
+    Allocations::new_in(UefiAllocator);
+static mut FREE_REGIONS: Allocations = 
+    Allocations::new_in(UefiAllocator);
 
-type Allocations = Vec::<Allocation>;
+type Allocations = Vec::<Allocation, UefiAllocator>;
 
 #[derive(PartialEq)]
 pub struct Allocation {
@@ -22,8 +26,7 @@ pub struct Allocation {
 pub struct Allocator;
 impl Allocator {
 
-    // Initializes the allocator with a frame
-    pub fn init(frame: &Frame) {
+    fn init() {
         unimplemented!();
     }
 
@@ -76,10 +79,15 @@ impl Allocator {
         return null_mut();
     }
 
-    fn get_frame(layout: Layout) -> *mut u8 {
+    fn get_frame(&self, layout: Layout) -> *mut u8 {
+        trace!("Allocator::get_frame called!");
         
-        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() }
-            .unwrap_or(return null_mut());
+        let frame = unsafe { FRAME_ALLOCATOR.allocate_frame() };
+        if frame.is_none() {
+            trace!("Allocator::get_frame failed!");
+            return null_mut()
+        }
+        let frame = frame.unwrap();
 
         let reg = Allocation {
             start: frame.start_address(),
@@ -99,24 +107,31 @@ impl Allocator {
 
         unsafe{ FREE_REGIONS.push(new_free) };
 
+        trace!("Allocator::get_frame successful!");
         return reg.start.as_u64() as *mut u8;
     }
 
 } unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        trace!("Allocator::alloc called!");
+
+        if layout.size() > 4096 {panic!("Allocator::alloc Layout too big");}
 
         // Check if the allocation can be made from
         // already known free regions of memory
         let free_ptr = self.alloc_from_free(layout);
-        
-        // If an allocation can be made from
-        // known free regions, return a pointer to it
+        if !free_ptr.is_null() { return free_ptr; }
+
+        // Use a new frame
+        let free_ptr = self.get_frame(layout);
         if !free_ptr.is_null() { return free_ptr; }
 
         // This temporarily return a null pointer
-        else { return null_mut() };
+        trace!("Allocator::alloc failed!");
+        return null_mut();
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        trace!("Allocator::dealloc called!");
 
         // Make an allocation from the layout to test against
         let test_alloc = Allocation {
@@ -127,21 +142,20 @@ impl Allocator {
         // Get the index of the allocation if it exists.
         // If it doesn't exist return
         let index = ALLOCATIONS.iter()
-            .position(|alloc| *alloc == test_alloc)
-            .unwrap_or(return);
+            .position(|alloc| *alloc == test_alloc);
+        if index.is_none() {
+            trace!("Allocator::dealloc called!");
+            return;
+        }
+        let index = index.unwrap();
        
         // Recycle the allocation
         let new_free = ALLOCATIONS.remove(index);
         FREE_REGIONS.push(new_free);
     }
 }
-// impl Allocator {
-//     pub fn allocate(
-//         &self,
-//         layout: Layout,
-//     ) -> Result<NonNull<[u8]>, AllocError> { self.alloc(layout); }
-    
-//     pub fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-//         self.dealloc(ptr, layout);
-//     }
-// }
+
+fn align_up(addr: usize, align: usize) -> usize {
+    // Align the address
+    (addr + align - 1) & !(align - 1)
+}

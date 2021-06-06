@@ -6,9 +6,9 @@ use core::ptr::NonNull;
 use uefi::table::boot::MemoryType;
 use crate::ST;
 
-struct UefiAllocator;
-impl UefiAllocator {
-    pub fn allocate(&self, layout: Layout) 
+pub struct UefiAllocator;
+unsafe impl Allocator for UefiAllocator {
+    fn allocate(&self, layout: Layout) 
         -> Result<NonNull<[u8]>, AllocError> {
 
         // Get the system table
@@ -35,7 +35,7 @@ impl UefiAllocator {
     }
 
     #[allow(unused_must_use)]
-    pub fn deallocate(&self, ptr: NonNull<[u8]>, layout: Layout) {
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         // Get the system table
         if let Some(st) = unsafe {ST.as_ref()} {
 

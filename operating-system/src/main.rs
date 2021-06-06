@@ -55,7 +55,7 @@ fn efi_main(_image: uefi::Handle, st: SystemTable<Boot>) -> Status {
     info!("Initializing the Global Frame Allocator");
     unsafe { FRAME_ALLOCATOR.init(); }
 
-    info!("Initializing the Global Allocator");
+    // info!("Initializing the Global Allocator");
     // Allocator::init();
     
     debug!("Getting Handles to System Tables");

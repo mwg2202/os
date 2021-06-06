@@ -7,17 +7,21 @@ use x86_64::structures::paging::page::Size4KiB;
 use x86_64::PhysAddr;
 use uefi::table::boot::{MemoryType, MemoryDescriptor};
 use alloc::vec::Vec;
+use crate::memory::uefi_allocator::UefiAllocator;
 
 pub type Frame = PhysFrame::<Size4KiB>;
 
 pub static mut FRAME_ALLOCATOR: FrameAllocator 
     = FrameAllocator::new();
 
-pub struct FrameAllocator(Vec::<(Frame, bool)>);
+pub struct FrameAllocator(Vec::<(Frame, bool), UefiAllocator>);
 impl FrameAllocator {
     
     /// Creates an empty frame allocator
-    pub const fn new() -> Self { Self(Vec::<(Frame, bool)>::new()) }
+    pub const fn new() -> Self { 
+        Self(Vec::<(Frame, bool), UefiAllocator>::new_in(
+                UefiAllocator)) 
+    }
 
     pub fn init(&mut self) {
 
@@ -35,12 +39,7 @@ impl FrameAllocator {
             let addr = PhysAddr::new(
                 desc.phys_start + i*4096);
             let frame = PhysFrame::containing_address(addr);
-
-            if self.0.is_empty() {
-                Allocator::init(&frame);
-            } else {
-                self.0.push( (frame, true) );
-            }
+            self.0.push( (frame, true) );
         }
     }
    
