@@ -1,6 +1,18 @@
 # operating-system
 ### An attempt to create a custom operating system built on Rust
 
+### Features
+  - [x] UEFI Support
+  - [ ] Multiboot2 Support
+  - [ ] Shutdown using ACPI
+  - [ ] VGA Graphics
+  - [ ] Native Intel Graphics
+  - [ ] Scheduling
+  - [ ] Multithreading
+  - [ ] Memory Management (Allocator, Mapper, Frame Allocator)
+  - [ ] SATA Support
+  - [ ] USB Support
+
 ### Dependencies
   - rust (nightly)
   - cargo
